@@ -2,7 +2,7 @@ import logging
 import os
 import random
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 import cv2
 import hydra
@@ -11,22 +11,22 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.utils import get_file_list, get_dir_list
+from src.utils import get_dir_list, get_file_list
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
 def select_elements(
-        lst: List[str],
-        n: int,
-        seed=None,
+    lst: List[str],
+    n: int,
+    seed=None,
 ):
     if seed is not None:
         random.seed(seed)
 
     if n > len(lst):
-        raise ValueError("N is greater than the length of the list")
+        raise ValueError('N is greater than the length of the list')
 
     selected_elements = random.sample(lst, n)
     random.shuffle(selected_elements)
@@ -35,16 +35,16 @@ def select_elements(
 
 
 def process_sample(
-        sample_dir: str,
-        num_images: int,
-        scaling_factor: float,
-        save_dir: str,
-        seed: int,
+    sample_dir: str,
+    num_images: int,
+    scaling_factor: float,
+    save_dir: str,
+    seed: int,
 ) -> None:
     # Get list of image paths
     img_paths = get_file_list(
         src_dirs=os.path.join(sample_dir, 'img'),
-        ext_list='.png'
+        ext_list='.png',
     )
 
     # Load layout image
@@ -67,16 +67,19 @@ def process_sample(
     )
 
     # Find connected components
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresh_resized, connectivity=8)
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        thresh_resized,
+        connectivity=8,
+    )
 
-    for img_num in tqdm(range(num_images), desc="Generate images", unit=' images'):
+    for img_num in tqdm(range(num_images), desc='Generate images', unit=' images'):
         # Create a new image with transparent background
         img_res = np.zeros((thresh_resized.shape[0], thresh_resized.shape[1], 4), dtype=np.uint8)
 
         # Iterate through each component (excluding background)
         img_paths_selected = select_elements(
             lst=img_paths,
-            n=num_labels-1,
+            n=num_labels - 1,
             seed=seed + img_num,  # Adjust seed for each image
         )
         for label in range(1, num_labels):
@@ -105,12 +108,18 @@ def process_sample(
             # Ensure the image stays within the layout boundaries
             x = max(x, 0)
             y = max(y, 0)
-            x_end = min(x + img.shape[1], img_res.shape[1])  # Ensure x_end doesn't exceed img_res width
-            y_end = min(y + img.shape[0], img_res.shape[0])  # Ensure y_end doesn't exceed img_res height
+            x_end = min(
+                x + img.shape[1],
+                img_res.shape[1],
+            )  # Ensure x_end doesn't exceed img_res width
+            y_end = min(
+                y + img.shape[0],
+                img_res.shape[0],
+            )  # Ensure y_end doesn't exceed img_res height
 
             # Paste the resized image onto the result if it has non-zero dimensions
             if x_end > x and y_end > y:
-                img_res[y:y_end, x:x_end] = img[:y_end - y, :x_end - x]
+                img_res[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
 
         # Save the result with a transparent background
         sample_name = Path(sample_dir).name
@@ -118,6 +127,7 @@ def process_sample(
         os.makedirs(sample_save_dir, exist_ok=True)
         save_path = os.path.join(sample_save_dir, f'{sample_name}_{img_num+1:02d}.png')
         cv2.imwrite(save_path, img_res)
+
 
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),

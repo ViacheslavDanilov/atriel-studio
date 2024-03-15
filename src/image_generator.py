@@ -23,15 +23,34 @@ class ImageGenerator:
         self.seed = seed
         self.save_dir = save_dir
 
+    @staticmethod
     def select_elements(
-        self,
         lst: List[str],
         n: int,
     ) -> List[str]:
-        random.seed(self.seed)
         if n > len(lst):
             raise ValueError('N is greater than the length of the list')
-        return random.sample(lst, n)
+        selected_elements = random.sample(lst, n)
+        random.shuffle(selected_elements)
+        return selected_elements
+
+    def crop_transparent_images(
+        self,
+        img: np.ndarray,
+    ) -> np.ndarray:
+        # Find non-zero alpha values
+        non_transparent_pixels = cv2.findNonZero(img[:, :, 3])
+
+        if non_transparent_pixels is None:
+            return img
+
+        # Get bounding box of non-transparent region
+        x, y, w, h = cv2.boundingRect(non_transparent_pixels)
+
+        # Crop the image
+        cropped_img = img[y : y + h, x : x + w]
+
+        return cropped_img
 
     def process_sample(
         self,
@@ -69,10 +88,12 @@ class ImageGenerator:
                 img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
                 if img.shape[2] == 3:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+                img = self.crop_transparent_images(img)
                 img = cv2.resize(
                     img,
                     (stats[label, cv2.CC_STAT_WIDTH], stats[label, cv2.CC_STAT_HEIGHT]),
                 )
+
                 x, y = int(cx - img.shape[1] / 2), int(cy - img.shape[0] / 2)
                 x, y = max(x, 0), max(y, 0)
                 x_end, y_end = min(x + img.shape[1], img_res.shape[1]), min(

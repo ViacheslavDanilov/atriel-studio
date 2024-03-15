@@ -52,24 +52,32 @@ class ImageGenerator:
 
         return cropped_img
 
+    def binarize_layout(
+        self,
+        layout_path: str,
+    ) -> np.ndarray:
+        layout = cv2.imread(layout_path, cv2.IMREAD_UNCHANGED)
+        gray_layout = cv2.cvtColor(layout, cv2.COLOR_BGR2GRAY)
+        ret, img_bin = cv2.threshold(gray_layout, 127, 255, cv2.THRESH_BINARY)
+        img_bin_resized = cv2.resize(
+            img_bin,
+            dsize=None,
+            fx=self.scaling_factor,
+            fy=self.scaling_factor,
+            interpolation=cv2.INTER_NEAREST,
+        )
+        return img_bin_resized
+
     def process_sample(
         self,
         sample_dir: str,
     ) -> None:
         img_paths = self.get_file_list(os.path.join(sample_dir, 'img'), '.png')
         layout_path = os.path.join(sample_dir, 'layout.png')
-        layout = cv2.imread(layout_path, cv2.IMREAD_UNCHANGED)
-        gray_layout = cv2.cvtColor(layout, cv2.COLOR_BGR2GRAY)
-        ret, thresh = cv2.threshold(gray_layout, 127, 255, cv2.THRESH_BINARY)
-        thresh_resized = cv2.resize(
-            thresh,
-            dsize=None,
-            fx=self.scaling_factor,
-            fy=self.scaling_factor,
-            interpolation=cv2.INTER_NEAREST,
-        )
+        img_bin = self.binarize_layout(layout_path)
+
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-            thresh_resized,
+            img_bin,
             connectivity=8,
         )
 
@@ -79,7 +87,7 @@ class ImageGenerator:
 
         for img_num in tqdm(range(self.num_images), desc='Generate images', unit=' images'):
             img_res = np.zeros(
-                (thresh_resized.shape[0], thresh_resized.shape[1], 4),
+                (img_bin.shape[0], img_bin.shape[1], 4),
                 dtype=np.uint8,
             )
             img_paths_selected = self.select_elements(img_paths, num_labels - 1)
@@ -123,8 +131,8 @@ class ImageGenerator:
 
 if __name__ == '__main__':
 
-    sample_dir = 'data/stories/01'
-    save_dir = 'data/stories_ready'
+    sample_dir = 'data/highlights/01'
+    save_dir = 'data/highlights_ready'
 
     processor = ImageGenerator(
         num_images=5,

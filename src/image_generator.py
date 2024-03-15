@@ -23,13 +23,15 @@ class ImageGenerator:
         self.seed = seed
         self.save_dir = save_dir
 
-    def select_elements(self, lst: List[str], n: int) -> List[str]:
+    def select_elements(
+        self,
+        lst: List[str],
+        n: int,
+    ) -> List[str]:
         random.seed(self.seed)
         if n > len(lst):
             raise ValueError('N is greater than the length of the list')
-        selected_elements = random.sample(lst, n)
-        random.shuffle(selected_elements)
-        return selected_elements
+        return random.sample(lst, n)
 
     def process_sample(
         self,
@@ -52,15 +54,18 @@ class ImageGenerator:
             connectivity=8,
         )
 
+        sample_name = Path(sample_dir).name
+        sample_save_dir = os.path.join(self.save_dir, sample_name)
+        os.makedirs(sample_save_dir, exist_ok=True)
+
         for img_num in tqdm(range(self.num_images), desc='Generate images', unit=' images'):
             img_res = np.zeros(
                 (thresh_resized.shape[0], thresh_resized.shape[1], 4),
                 dtype=np.uint8,
             )
             img_paths_selected = self.select_elements(img_paths, num_labels - 1)
-            for label in range(1, num_labels):
+            for label, img_path in zip(range(1, num_labels), img_paths_selected):
                 cx, cy = centroids[label]
-                img_path = img_paths_selected.pop(0)
                 img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
                 if img.shape[2] == 3:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
@@ -68,27 +73,29 @@ class ImageGenerator:
                     img,
                     (stats[label, cv2.CC_STAT_WIDTH], stats[label, cv2.CC_STAT_HEIGHT]),
                 )
-                x = int(cx - img.shape[1] / 2)
-                y = int(cy - img.shape[0] / 2)
-                x = max(x, 0)
-                y = max(y, 0)
-                x_end = min(x + img.shape[1], img_res.shape[1])
-                y_end = min(y + img.shape[0], img_res.shape[0])
+                x, y = int(cx - img.shape[1] / 2), int(cy - img.shape[0] / 2)
+                x, y = max(x, 0), max(y, 0)
+                x_end, y_end = min(x + img.shape[1], img_res.shape[1]), min(
+                    y + img.shape[0],
+                    img_res.shape[0],
+                )
                 if x_end > x and y_end > y:
                     img_res[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
-            sample_name = Path(sample_dir).name
-            sample_save_dir = os.path.join(self.save_dir, sample_name)
-            os.makedirs(sample_save_dir, exist_ok=True)
+
             save_path = os.path.join(sample_save_dir, f'{sample_name}_{img_num + 1:02d}.png')
             cv2.imwrite(save_path, img_res)
 
     @staticmethod
-    def get_file_list(src_dir: str, ext_list: str) -> List[str]:
-        file_list = []
-        for root, dirs, files in os.walk(src_dir):
-            for file in files:
-                if file.endswith(ext_list):
-                    file_list.append(os.path.join(root, file))
+    def get_file_list(
+        src_dir: str,
+        ext_list: str,
+    ) -> List[str]:
+        file_list = [
+            os.path.join(root, file)
+            for root, dirs, files in os.walk(src_dir)
+            for file in files
+            if file.endswith(ext_list)
+        ]
         file_list.sort()
         return file_list
 

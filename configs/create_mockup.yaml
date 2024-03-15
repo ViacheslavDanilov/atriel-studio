@@ -1,0 +1,11 @@
+defaults:
+- main
+- _self_
+
+data_dir: data/stories
+save_dir: data/stories_ready
+num_images: 10
+scaling_factor: 2
+include_samples: []   # Example: "01"
+exclude_samples: []   # Example: "01"
+seed: 11

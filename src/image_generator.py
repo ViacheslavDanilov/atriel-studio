@@ -6,7 +6,6 @@ from typing import List
 
 import cv2
 import numpy as np
-from tqdm import tqdm
 
 
 class ImageGenerator:
@@ -17,12 +16,10 @@ class ImageGenerator:
         num_images: int,
         scaling_factor: float,
         seed: int,
-        save_dir: str,
     ):
         self.num_images = num_images
         self.scaling_factor = scaling_factor
         self.seed = seed
-        self.save_dir = save_dir
 
     @staticmethod
     def randomly_select_elements(
@@ -99,8 +96,8 @@ class ImageGenerator:
         )
         return img_bin_resized
 
+    @staticmethod
     def load_background(
-        self,
         img_path: str,
         img_height: int,
         img_width: int,
@@ -121,11 +118,12 @@ class ImageGenerator:
     def process_sample(
         self,
         sample_dir: str,
+        save_dir: str,
     ) -> None:
 
         # Create a directory to store the files
         sample_name = Path(sample_dir).name
-        sample_save_dir = os.path.join(self.save_dir, sample_name)
+        sample_save_dir = os.path.join(save_dir, sample_name)
         os.makedirs(sample_save_dir, exist_ok=True)
 
         img_dir = os.path.join(sample_dir, 'img')
@@ -135,20 +133,23 @@ class ImageGenerator:
         img_back_paths_ = self.get_file_list(sample_dir, 'background*.[pP][nN][gG]')
         # fmt: off
         img_back_paths = self.uniformly_select_elements(img_back_paths_, self.num_images, shuffle=True)
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(img_bin, connectivity=8)
-        for idx, img_back_path in tqdm(enumerate(img_back_paths), desc='Generate images', unit=' images'):
-            # fmt: on
+        num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(img_bin, connectivity=8)
+        # fmt: on
+        for idx, img_back_path in enumerate(img_back_paths):
             img_res = self.load_background(
                 img_back_path,
                 img_height=img_bin.shape[0],
                 img_width=img_bin.shape[1],
             )
+
             img_paths_selected = self.randomly_select_elements(img_paths, num_labels - 1)
+
             for label, img_path in zip(range(1, num_labels), img_paths_selected):
                 cx, cy = centroids[label]
 
                 img = self.load_image(img_path)
                 img = self.crop_transparent_images(img)
+
                 img_size = (stats[label, cv2.CC_STAT_WIDTH], stats[label, cv2.CC_STAT_HEIGHT])
                 img = cv2.resize(img, dsize=img_size)
 
@@ -161,16 +162,20 @@ class ImageGenerator:
                 )
 
                 if x_end > x and y_end > y:
-                    # Perform alpha blending
-                    alpha_img = img[:, :, 3] / 255.0
-                    alpha_res = 1.0 - alpha_img
+                    # Check if the background is completely transparent
+                    if np.max(img_res[y:y_end, x:x_end, 3]) == 0:
+                        # Copy non-transparent parts of the foreground directly onto the background
+                        img_res[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
+                    else:
+                        # Perform alpha blending
+                        alpha_img = img[:, :, 3] / 255.0
+                        alpha_res = 1.0 - alpha_img
 
-                    # Blend RGB channels
-                    for c in range(3):
-                        img_res[y:y_end, x:x_end, c] = (
-                            alpha_img * img[: y_end - y, : x_end - x, c]
-                            + alpha_res * img_res[y:y_end, x:x_end, c]
-                        )
+                        for c in range(3):
+                            img_res[y:y_end, x:x_end, c] = (
+                                alpha_img * img[: y_end - y, : x_end - x, c]
+                                + alpha_res * img_res[y:y_end, x:x_end, c]
+                            )
 
             save_path = os.path.join(sample_save_dir, f'{sample_name}_{idx + 1:02d}.png')
             cv2.imwrite(save_path, img_res, [cv2.IMWRITE_PNG_COMPRESSION, 6])
@@ -191,13 +196,15 @@ class ImageGenerator:
 
 if __name__ == '__main__':
 
-    sample_dir = 'data/stories/01'
-    save_dir = 'data/stories_ready'
+    sample_dir = 'data/input/stories/01'
+    save_dir = 'data/output/stories/01'
 
     processor = ImageGenerator(
-        num_images=10,
+        num_images=5,
         scaling_factor=1,
-        seed=42,
+        seed=11,
+    )
+    processor.process_sample(
+        sample_dir=sample_dir,
         save_dir=save_dir,
     )
-    processor.process_sample(sample_dir=sample_dir)

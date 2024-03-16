@@ -6,7 +6,6 @@ from typing import List
 
 import cv2
 import numpy as np
-from tqdm import tqdm
 
 
 class ImageGenerator:
@@ -97,8 +96,8 @@ class ImageGenerator:
         )
         return img_bin_resized
 
+    @staticmethod
     def load_background(
-        self,
         img_path: str,
         img_height: int,
         img_width: int,
@@ -135,7 +134,7 @@ class ImageGenerator:
         # fmt: off
         img_back_paths = self.uniformly_select_elements(img_back_paths_, self.num_images, shuffle=True)
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(img_bin, connectivity=8)
-        for idx, img_back_path in tqdm(enumerate(img_back_paths), desc='Generate images', unit=' images'):
+        for idx, img_back_path in enumerate(img_back_paths):
             # fmt: on
             img_res = self.load_background(
                 img_back_path,

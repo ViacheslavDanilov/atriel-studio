@@ -196,8 +196,8 @@ class ImageGenerator:
 
 if __name__ == '__main__':
 
-    sample_dir = 'data/input/stories/01'
-    save_dir = 'data/output/stories/01'
+    sample_dir = 'data/input/highlights/01'
+    save_dir = 'data/output/highlights/'
 
     processor = ImageGenerator(
         num_images=5,

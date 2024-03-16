@@ -83,7 +83,7 @@ class ImageGenerator:
 
         return cropped_img
 
-    def binarize_layout(
+    def load_layout(
         self,
         layout_path: str,
     ) -> np.ndarray:
@@ -109,6 +109,15 @@ class ImageGenerator:
         img_resized = cv2.resize(img, dsize=(img_width, img_height), interpolation=cv2.INTER_CUBIC)
         return img_resized
 
+    @staticmethod
+    def load_image(
+        img_path: str,
+    ) -> np.ndarray:
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+        if img.shape[2] == 3:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+        return img
+
     def process_sample(
         self,
         sample_dir: str,
@@ -122,23 +131,13 @@ class ImageGenerator:
         img_dir = os.path.join(sample_dir, 'img')
         img_paths = self.get_file_list(img_dir, '*.[pP][nN][gG]')
         layout_path = os.path.join(sample_dir, 'layout.png')
-        img_bin = self.binarize_layout(layout_path)
+        img_bin = self.load_layout(layout_path)
         img_back_paths_ = self.get_file_list(sample_dir, 'background*.[pP][nN][gG]')
-        img_back_paths = self.uniformly_select_elements(
-            img_back_paths_,
-            self.num_images,
-            shuffle=True,
-        )
-
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-            img_bin,
-            connectivity=8,
-        )
-        for idx, img_back_path in tqdm(
-            enumerate(img_back_paths),
-            desc='Generate images',
-            unit=' images',
-        ):
+        # fmt: off
+        img_back_paths = self.uniformly_select_elements(img_back_paths_, self.num_images, shuffle=True)
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(img_bin, connectivity=8)
+        for idx, img_back_path in tqdm(enumerate(img_back_paths), desc='Generate images', unit=' images'):
+            # fmt: on
             img_res = self.load_background(
                 img_back_path,
                 img_height=img_bin.shape[0],
@@ -147,16 +146,11 @@ class ImageGenerator:
             img_paths_selected = self.randomly_select_elements(img_paths, num_labels - 1)
             for label, img_path in zip(range(1, num_labels), img_paths_selected):
                 cx, cy = centroids[label]
-                img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
 
-                if img.shape[2] == 3:
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
-
+                img = self.load_image(img_path)
                 img = self.crop_transparent_images(img)
-                img = cv2.resize(
-                    img,
-                    (stats[label, cv2.CC_STAT_WIDTH], stats[label, cv2.CC_STAT_HEIGHT]),
-                )
+                img_size = (stats[label, cv2.CC_STAT_WIDTH], stats[label, cv2.CC_STAT_HEIGHT])
+                img = cv2.resize(img, dsize=img_size)
 
                 x, y = int(cx - img.shape[1] / 2), int(cy - img.shape[0] / 2)
                 x, y = max(x, 0), max(y, 0)
@@ -171,14 +165,15 @@ class ImageGenerator:
                     alpha_img = img[:, :, 3] / 255.0
                     alpha_res = 1.0 - alpha_img
 
-                    for c in range(3):  # Blend RGB channels
+                    # Blend RGB channels
+                    for c in range(3):
                         img_res[y:y_end, x:x_end, c] = (
                             alpha_img * img[: y_end - y, : x_end - x, c]
                             + alpha_res * img_res[y:y_end, x:x_end, c]
                         )
 
             save_path = os.path.join(sample_save_dir, f'{sample_name}_{idx + 1:02d}.png')
-            cv2.imwrite(save_path, img_res)
+            cv2.imwrite(save_path, img_res, [cv2.IMWRITE_PNG_COMPRESSION, 6])
 
     @staticmethod
     def get_file_list(
@@ -201,7 +196,7 @@ if __name__ == '__main__':
 
     processor = ImageGenerator(
         num_images=10,
-        scaling_factor=2,
+        scaling_factor=1,
         seed=42,
         save_dir=save_dir,
     )

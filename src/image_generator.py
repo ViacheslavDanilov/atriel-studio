@@ -17,12 +17,10 @@ class ImageGenerator:
         num_images: int,
         scaling_factor: float,
         seed: int,
-        save_dir: str,
     ):
         self.num_images = num_images
         self.scaling_factor = scaling_factor
         self.seed = seed
-        self.save_dir = save_dir
 
     @staticmethod
     def randomly_select_elements(
@@ -121,11 +119,12 @@ class ImageGenerator:
     def process_sample(
         self,
         sample_dir: str,
+        save_dir: str,
     ) -> None:
 
         # Create a directory to store the files
         sample_name = Path(sample_dir).name
-        sample_save_dir = os.path.join(self.save_dir, sample_name)
+        sample_save_dir = os.path.join(save_dir, sample_name)
         os.makedirs(sample_save_dir, exist_ok=True)
 
         img_dir = os.path.join(sample_dir, 'img')
@@ -191,13 +190,15 @@ class ImageGenerator:
 
 if __name__ == '__main__':
 
-    sample_dir = 'data/stories/01'
-    save_dir = 'data/stories_ready'
+    sample_dir = 'data/input/stories/01'
+    save_dir = 'data/output/stories/01'
 
     processor = ImageGenerator(
         num_images=10,
         scaling_factor=1,
         seed=42,
+    )
+    processor.process_sample(
+        sample_dir=sample_dir,
         save_dir=save_dir,
     )
-    processor.process_sample(sample_dir=sample_dir)

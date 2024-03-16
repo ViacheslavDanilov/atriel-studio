@@ -1,6 +1,4 @@
-import logging
 import os
-from glob import glob
 from pathlib import Path
 from typing import List, Union
 
@@ -34,24 +32,24 @@ def get_file_list(
 
 def get_dir_list(
     data_dir: str,
-    include_dirs: List[str],
-    exclude_dirs: List[str],
+    include_dirs: List[str] = [],
+    exclude_dirs: List[str] = [],
 ) -> List[str]:
     dir_list = []
-    _dir_list = glob(data_dir + '/*/')
-    for series_dir in _dir_list:
-        if include_dirs and Path(series_dir).name not in include_dirs:
-            logging.info(
-                f'Skip {Path(series_dir).name} because it is not in the included_dirs list',
-            )
+
+    for series_dir in os.listdir(data_dir):
+        series_path = Path(os.path.join(data_dir, series_dir))
+        if not series_path.is_dir():
             continue
 
-        if exclude_dirs and Path(series_dir).name in exclude_dirs:
-            logging.info(
-                f'Skip {Path(series_dir).name} because it is in the excluded_dirs list',
-            )
+        if include_dirs and series_dir not in include_dirs:
             continue
 
-        dir_list.append(series_dir)
+        if exclude_dirs and series_dir in exclude_dirs:
+            continue
+
+        dir_list.append(str(series_path))
+
     dir_list.sort()
+
     return dir_list

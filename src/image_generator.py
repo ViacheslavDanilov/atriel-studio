@@ -1,3 +1,4 @@
+import fnmatch
 import os
 import random
 from pathlib import Path
@@ -24,18 +25,48 @@ class ImageGenerator:
         self.save_dir = save_dir
 
     @staticmethod
-    def select_elements(
+    def randomly_select_elements(
         lst: List[str],
-        n: int,
+        num_elements: int,
     ) -> List[str]:
-        if n > len(lst):
+        if num_elements > len(lst):
             raise ValueError('N is greater than the length of the list')
-        selected_elements = random.sample(lst, n)
+        selected_elements = random.sample(lst, num_elements)
         random.shuffle(selected_elements)
         return selected_elements
 
+    @staticmethod
+    def uniformly_select_elements(
+        lst: List[str],
+        num_elements: int,
+        shuffle: bool = True,
+    ):
+        # Shuffle the list of elements
+        random.shuffle(lst)
+
+        # Calculate the number of times each element should be picked
+        selections_per_element = num_elements // len(lst)
+
+        # Create a list to store the selected elements
+        selected_elements = []
+
+        # Iterate through the shuffled list and select elements
+        for element in lst:
+            # Repeat each element for the calculated number of times
+            selected_elements.extend([element] * selections_per_element)
+
+        # If there are remaining selections, randomly pick elements to fill the quota
+        remaining_selections = num_elements % len(lst)
+        if remaining_selections > 0:
+            selected_elements.extend(random.choices(lst, k=remaining_selections))
+
+        if shuffle:
+            random.shuffle(selected_elements)
+
+        return selected_elements
+
+    @staticmethod
     def crop_transparent_images(
-        self,
         img: np.ndarray,
     ) -> np.ndarray:
         # Find non-zero alpha values
@@ -68,29 +99,52 @@ class ImageGenerator:
         )
         return img_bin_resized
 
+    def process_background(
+        self,
+        img_path: str,
+        img_height: int,
+        img_width: int,
+    ) -> np.ndarray:
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+        img_resized = cv2.resize(img, dsize=(img_width, img_height), interpolation=cv2.INTER_CUBIC)
+        return img_resized
+
     def process_sample(
         self,
         sample_dir: str,
     ) -> None:
-        img_paths = self.get_file_list(os.path.join(sample_dir, 'img'), '.png')
+
+        # Create a directory to store the files
+        sample_name = Path(sample_dir).name
+        sample_save_dir = os.path.join(self.save_dir, sample_name)
+        os.makedirs(sample_save_dir, exist_ok=True)
+
+        img_dir = os.path.join(sample_dir, 'img')
+        img_paths = self.get_file_list(img_dir, '*.[pP][nN][gG]')
         layout_path = os.path.join(sample_dir, 'layout.png')
         img_bin = self.binarize_layout(layout_path)
+        img_back_paths_ = self.get_file_list(sample_dir, 'background_*.[pP][nN][gG]')
+        img_back_paths = self.uniformly_select_elements(
+            img_back_paths_,
+            self.num_images,
+            shuffle=True,
+        )
 
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
             img_bin,
             connectivity=8,
         )
-
-        sample_name = Path(sample_dir).name
-        sample_save_dir = os.path.join(self.save_dir, sample_name)
-        os.makedirs(sample_save_dir, exist_ok=True)
-
-        for img_num in tqdm(range(self.num_images), desc='Generate images', unit=' images'):
-            img_res = np.zeros(
-                (img_bin.shape[0], img_bin.shape[1], 4),
-                dtype=np.uint8,
+        for idx, img_back_path in tqdm(
+            enumerate(img_back_paths),
+            desc='Generate images',
+            unit=' images',
+        ):
+            img_res = self.process_background(
+                img_back_path,
+                img_height=img_bin.shape[0],
+                img_width=img_bin.shape[1],
             )
-            img_paths_selected = self.select_elements(img_paths, num_labels - 1)
+            img_paths_selected = self.randomly_select_elements(img_paths, num_labels - 1)
             for label, img_path in zip(range(1, num_labels), img_paths_selected):
                 cx, cy = centroids[label]
                 img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
@@ -111,20 +165,19 @@ class ImageGenerator:
                 if x_end > x and y_end > y:
                     img_res[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
 
-            save_path = os.path.join(sample_save_dir, f'{sample_name}_{img_num + 1:02d}.png')
+            save_path = os.path.join(sample_save_dir, f'{sample_name}_{idx + 1:02d}.png')
             cv2.imwrite(save_path, img_res)
 
     @staticmethod
     def get_file_list(
         src_dir: str,
-        ext_list: str,
+        file_template: str,
     ) -> List[str]:
-        file_list = [
-            os.path.join(root, file)
-            for root, dirs, files in os.walk(src_dir)
-            for file in files
-            if file.endswith(ext_list)
-        ]
+        file_list = []
+        for root, dirs, files in os.walk(src_dir):
+            file_list.extend(
+                [os.path.join(root, file) for file in fnmatch.filter(files, file_template)],
+            )
         file_list.sort()
         return file_list
 
@@ -135,7 +188,7 @@ if __name__ == '__main__':
     save_dir = 'data/highlights_ready'
 
     processor = ImageGenerator(
-        num_images=5,
+        num_images=10,
         scaling_factor=2,
         seed=42,
         save_dir=save_dir,

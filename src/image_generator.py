@@ -99,7 +99,7 @@ class ImageGenerator:
         )
         return img_bin_resized
 
-    def process_background(
+    def load_background(
         self,
         img_path: str,
         img_height: int,
@@ -123,7 +123,7 @@ class ImageGenerator:
         img_paths = self.get_file_list(img_dir, '*.[pP][nN][gG]')
         layout_path = os.path.join(sample_dir, 'layout.png')
         img_bin = self.binarize_layout(layout_path)
-        img_back_paths_ = self.get_file_list(sample_dir, 'background_*.[pP][nN][gG]')
+        img_back_paths_ = self.get_file_list(sample_dir, 'background*.[pP][nN][gG]')
         img_back_paths = self.uniformly_select_elements(
             img_back_paths_,
             self.num_images,
@@ -139,7 +139,7 @@ class ImageGenerator:
             desc='Generate images',
             unit=' images',
         ):
-            img_res = self.process_background(
+            img_res = self.load_background(
                 img_back_path,
                 img_height=img_bin.shape[0],
                 img_width=img_bin.shape[1],
@@ -148,8 +148,10 @@ class ImageGenerator:
             for label, img_path in zip(range(1, num_labels), img_paths_selected):
                 cx, cy = centroids[label]
                 img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+
                 if img.shape[2] == 3:
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+
                 img = self.crop_transparent_images(img)
                 img = cv2.resize(
                     img,
@@ -158,12 +160,22 @@ class ImageGenerator:
 
                 x, y = int(cx - img.shape[1] / 2), int(cy - img.shape[0] / 2)
                 x, y = max(x, 0), max(y, 0)
+
                 x_end, y_end = min(x + img.shape[1], img_res.shape[1]), min(
                     y + img.shape[0],
                     img_res.shape[0],
                 )
+
                 if x_end > x and y_end > y:
-                    img_res[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
+                    # Perform alpha blending
+                    alpha_img = img[:, :, 3] / 255.0
+                    alpha_res = 1.0 - alpha_img
+
+                    for c in range(3):  # Blend RGB channels
+                        img_res[y:y_end, x:x_end, c] = (
+                            alpha_img * img[: y_end - y, : x_end - x, c]
+                            + alpha_res * img_res[y:y_end, x:x_end, c]
+                        )
 
             save_path = os.path.join(sample_save_dir, f'{sample_name}_{idx + 1:02d}.png')
             cv2.imwrite(save_path, img_res)
@@ -184,8 +196,8 @@ class ImageGenerator:
 
 if __name__ == '__main__':
 
-    sample_dir = 'data/highlights/01'
-    save_dir = 'data/highlights_ready'
+    sample_dir = 'data/stories/01'
+    save_dir = 'data/stories_ready'
 
     processor = ImageGenerator(
         num_images=10,

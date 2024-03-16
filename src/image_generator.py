@@ -129,56 +129,58 @@ class ImageGenerator:
         img_dir = os.path.join(sample_dir, 'img')
         img_paths = self.get_file_list(img_dir, '*.[pP][nN][gG]')
         layout_path = os.path.join(sample_dir, 'layout.png')
-        img_bin = self.load_layout(layout_path)
-        img_back_paths_ = self.get_file_list(sample_dir, 'background*.[pP][nN][gG]')
+        img_layout = self.load_layout(layout_path)
+        bg_paths_ = self.get_file_list(sample_dir, 'background*.[pP][nN][gG]')
         # fmt: off
-        img_back_paths = self.uniformly_select_elements(img_back_paths_, self.num_images, shuffle=True)
-        num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(img_bin, connectivity=8)
+        bg_paths = self.uniformly_select_elements(bg_paths_, self.num_images, shuffle=True)
+        num_objects, _, stats, centroids = cv2.connectedComponentsWithStats(img_layout, connectivity=8)
         # fmt: on
-        for idx, img_back_path in enumerate(img_back_paths):
-            img_res = self.load_background(
+        for idx, img_back_path in enumerate(bg_paths):
+            img_bg = self.load_background(
                 img_back_path,
-                img_height=img_bin.shape[0],
-                img_width=img_bin.shape[1],
+                img_height=img_layout.shape[0],
+                img_width=img_layout.shape[1],
             )
 
-            img_paths_selected = self.randomly_select_elements(img_paths, num_labels - 1)
+            img_paths_selected = self.randomly_select_elements(img_paths, num_objects - 1)
 
-            for label, img_path in zip(range(1, num_labels), img_paths_selected):
-                cx, cy = centroids[label]
+            for object_id, img_path in zip(range(1, num_objects), img_paths_selected):
+                cx, cy = centroids[object_id]
 
                 img = self.load_image(img_path)
                 img = self.crop_transparent_images(img)
-
-                img_size = (stats[label, cv2.CC_STAT_WIDTH], stats[label, cv2.CC_STAT_HEIGHT])
+                img_size = (
+                    stats[object_id, cv2.CC_STAT_WIDTH],
+                    stats[object_id, cv2.CC_STAT_HEIGHT],
+                )
                 img = cv2.resize(img, dsize=img_size)
 
                 x, y = int(cx - img.shape[1] / 2), int(cy - img.shape[0] / 2)
                 x, y = max(x, 0), max(y, 0)
 
-                x_end, y_end = min(x + img.shape[1], img_res.shape[1]), min(
+                x_end, y_end = min(x + img.shape[1], img_bg.shape[1]), min(
                     y + img.shape[0],
-                    img_res.shape[0],
+                    img_bg.shape[0],
                 )
 
                 if x_end > x and y_end > y:
                     # Check if the background is completely transparent
-                    if np.max(img_res[y:y_end, x:x_end, 3]) == 0:
+                    if np.max(img_bg[y:y_end, x:x_end, 3]) == 0:
                         # Copy non-transparent parts of the foreground directly onto the background
-                        img_res[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
+                        img_bg[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
                     else:
                         # Perform alpha blending
                         alpha_img = img[:, :, 3] / 255.0
                         alpha_res = 1.0 - alpha_img
 
                         for c in range(3):
-                            img_res[y:y_end, x:x_end, c] = (
+                            img_bg[y:y_end, x:x_end, c] = (
                                 alpha_img * img[: y_end - y, : x_end - x, c]
-                                + alpha_res * img_res[y:y_end, x:x_end, c]
+                                + alpha_res * img_bg[y:y_end, x:x_end, c]
                             )
 
             save_path = os.path.join(sample_save_dir, f'{sample_name}_{idx + 1:02d}.png')
-            cv2.imwrite(save_path, img_res, [cv2.IMWRITE_PNG_COMPRESSION, 6])
+            cv2.imwrite(save_path, img_bg, [cv2.IMWRITE_PNG_COMPRESSION, 6])
 
     @staticmethod
     def get_file_list(

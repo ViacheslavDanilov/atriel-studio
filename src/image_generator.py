@@ -172,7 +172,7 @@ class ImageGenerator:
             return img
 
     @staticmethod
-    def _load_image(
+    def _load_foreground(
         img_path: str,
     ) -> np.ndarray:
         img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
@@ -194,43 +194,47 @@ class ImageGenerator:
         return img
 
     @staticmethod
-    def _merge_images(
-        img: np.ndarray,
-        img_bg: np.ndarray,
+    def _merge_images_masked(
+        img_fore: np.ndarray,
+        img_back: np.ndarray,
+        mask_layout: np.ndarray,
         x_min: int,
         x_max: int,
         y_min: int,
         y_max: int,
     ) -> np.ndarray:
+        # Apply mask to the inserted image
+        img_fore = cv2.bitwise_and(img_fore, img_fore, mask=mask_layout[y_min:y_max, x_min:x_max])
+
         # Check if the background is completely transparent
-        if np.max(img_bg[y_min:y_max, x_min:x_max, 3]) == 0:
+        if np.max(img_back[y_min:y_max, x_min:x_max, 3]) == 0:
             # Copy non-transparent parts of the foreground directly onto the background
-            img_bg[y_min:y_max, x_min:x_max] = img[: y_max - y_min, : x_max - x_min]
+            img_back[y_min:y_max, x_min:x_max] = img_fore[: y_max - y_min, : x_max - x_min]
         else:
             # Perform alpha blending
-            alpha_img = img[:, :, 3] / 255.0
+            alpha_img = img_fore[:, :, 3] / 255.0
             alpha_res = 1.0 - alpha_img
 
             for c in range(3):
-                img_bg[y_min:y_max, x_min:x_max, c] = (
-                    alpha_img * img[: y_max - y_min, : x_max - x_min, c]
-                    + alpha_res * img_bg[y_min:y_max, x_min:x_max, c]
+                img_back[y_min:y_max, x_min:x_max, c] = (
+                    alpha_img * img_fore[: y_max - y_min, : x_max - x_min, c]
+                    + alpha_res * img_back[y_min:y_max, x_min:x_max, c]
                 )
-        return img_bg
+        return img_back
 
     @staticmethod
     def _compute_coordinates(
-        img: np.ndarray,
-        img_bg: np.ndarray,
+        img_fore: np.ndarray,
+        img_back: np.ndarray,
         centroid: List[float],
     ) -> Tuple[int, int, int, int]:
         cx, cy = centroid
-        x_min = int(cx - img.shape[1] / 2)
-        y_min = int(cy - img.shape[0] / 2)
+        x_min = int(cx - img_fore.shape[1] / 2)
+        y_min = int(cy - img_fore.shape[0] / 2)
         x_min = max(x_min, 0)
         y_min = max(y_min, 0)
-        x_max = min(x_min + img.shape[1], img_bg.shape[1])
-        y_max = min(y_min + img.shape[0], img_bg.shape[0])
+        x_max = min(x_min + img_fore.shape[1], img_back.shape[1])
+        y_max = min(y_min + img_fore.shape[0], img_back.shape[0])
 
         return x_min, y_min, x_max, y_max
 
@@ -240,28 +244,27 @@ class ImageGenerator:
         sample_dir: str,
         save_dir: str,
     ) -> None:
-
         img_dir = os.path.join(sample_dir, 'images')
         img_paths = self.get_file_list(img_dir, '*.[jpPJ][nNpP][gG]')
-        img_layout = self._load_layout(row.layout_path)
-        img_bg = self._load_background(
+        mask_layout = self._load_layout(row.layout_path)
+        img_back = self._load_background(
             row.background_path,
-            img_height=img_layout.shape[0],
-            img_width=img_layout.shape[1],
+            img_height=mask_layout.shape[0],
+            img_width=mask_layout.shape[1],
         )
 
         num_objects, _, stats, centroids = cv2.connectedComponentsWithStats(
-            img_layout,
+            mask_layout,
             connectivity=8,
         )
 
         for idx in range(self.num_images_per_bg):
             img_paths_selected = self._randomly_select_elements(img_paths, num_objects - 1)
             for object_id, img_path in zip(range(1, num_objects), img_paths_selected):
-                img = self._load_image(img_path)
-                img = self._crop_transparent_images(img)
-                img = cv2.resize(
-                    img,
+                img_fore = self._load_foreground(img_path)
+                img_fore = self._crop_transparent_images(img_fore)
+                img_fore = cv2.resize(
+                    img_fore,
                     dsize=(
                         stats[object_id, cv2.CC_STAT_WIDTH],
                         stats[object_id, cv2.CC_STAT_HEIGHT],
@@ -269,15 +272,16 @@ class ImageGenerator:
                 )
 
                 x_min, y_min, x_max, y_max = self._compute_coordinates(
-                    img=img,
-                    img_bg=img_bg,
+                    img_fore=img_fore,
+                    img_back=img_back,
                     centroid=centroids[object_id],
                 )
 
                 if x_max > x_min and y_max > y_min:
-                    img_bg = self._merge_images(
-                        img=img,
-                        img_bg=img_bg,
+                    img_back = self._merge_images_masked(
+                        img_fore=img_fore,
+                        img_back=img_back,
+                        mask_layout=mask_layout,
                         x_min=x_min,
                         y_min=y_min,
                         x_max=x_max,
@@ -286,7 +290,7 @@ class ImageGenerator:
 
             filename = f'{row.layout_id}_{row.background_id}_{idx + 1:01d}.png'
             save_path = os.path.join(save_dir, filename)
-            cv2.imwrite(save_path, img_bg, [cv2.IMWRITE_PNG_COMPRESSION, 6])
+            cv2.imwrite(save_path, img_back, [cv2.IMWRITE_PNG_COMPRESSION, 6])
 
     def process_sample(
         self,
@@ -313,7 +317,7 @@ class ImageGenerator:
 
 if __name__ == '__main__':
 
-    sample_dir = 'data/input/stories/marketing_01'
+    sample_dir = 'data/input/stories/marketing_05'
     save_dir = 'data/output/stories/'
 
     layout_dir = os.path.join(sample_dir, 'layouts')
@@ -326,7 +330,7 @@ if __name__ == '__main__':
 
     processor = ImageGenerator(
         num_images_per_bg=3,
-        scaling_factor=1,
+        scaling_factor=2,
         seed=11,
     )
     processor.process_sample(

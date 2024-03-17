@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import List, Tuple
 
 import cv2
-from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 
 class ImageMatcher:
@@ -87,6 +87,19 @@ class ImageGenerator:
         self.seed = seed
 
     @staticmethod
+    def get_file_list(
+        src_dir: str,
+        file_template: str,
+    ) -> List[str]:
+        file_list = []
+        for root, dirs, files in os.walk(src_dir):
+            file_list.extend(
+                [os.path.join(root, file) for file in fnmatch.filter(files, file_template)],
+            )
+        file_list.sort()
+        return file_list
+
+    @staticmethod
     def _randomly_select_elements(
         lst: List[str],
         num_elements: int,
@@ -95,36 +108,6 @@ class ImageGenerator:
             raise ValueError('N is greater than the length of the list')
         selected_elements = random.sample(lst, num_elements)
         random.shuffle(selected_elements)
-        return selected_elements
-
-    @staticmethod
-    def _uniformly_select_elements(
-        lst: List[str],
-        num_elements: int,
-        shuffle: bool = True,
-    ):
-        # Shuffle the list of elements
-        random.shuffle(lst)
-
-        # Calculate the number of times each element should be picked
-        selections_per_element = num_elements // len(lst)
-
-        # Create a list to store the selected elements
-        selected_elements = []
-
-        # Iterate through the shuffled list and select elements
-        for element in lst:
-            # Repeat each element for the calculated number of times
-            selected_elements.extend([element] * selections_per_element)
-
-        # If there are remaining selections, randomly pick elements to fill the quota
-        remaining_selections = num_elements % len(lst)
-        if remaining_selections > 0:
-            selected_elements.extend(random.choices(lst, k=remaining_selections))
-
-        if shuffle:
-            random.shuffle(selected_elements)
-
         return selected_elements
 
     @staticmethod
@@ -168,10 +151,14 @@ class ImageGenerator:
         img_width: int,
     ) -> np.ndarray:
         img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
-
-        # Check if the dimensions differ
+        if img.shape[2] == 3:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
         if img.shape[0] != img_height or img.shape[1] != img_width:
-            img_resized = cv2.resize(img, dsize=(img_width, img_height), interpolation=cv2.INTER_CUBIC)
+            img_resized = cv2.resize(
+                img,
+                dsize=(img_width, img_height),
+                interpolation=cv2.INTER_CUBIC,
+            )
             return img_resized
         else:
             return img
@@ -180,23 +167,47 @@ class ImageGenerator:
     def _load_image(
         img_path: str,
     ) -> np.ndarray:
-        img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+        # TODO: convert grayscale to RGBA
+        try:
+            if img.shape[2] == 3:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+        except Exception as e:
+            print(img_path)
+            print(img.shape)
+            print(e)
         return img
 
+    @staticmethod
     def _merge_images(
-            self,
-            img: np.ndarray,
-            img_bg: np.ndarray,
+        img: np.ndarray,
+        img_bg: np.ndarray,
+        x_min: int,
+        x_max: int,
+        y_min: int,
+        y_max: int,
+    ) -> np.ndarray:
+        # Check if the background is completely transparent
+        if np.max(img_bg[y_min:y_max, x_min:x_max, 3]) == 0:
+            # Copy non-transparent parts of the foreground directly onto the background
+            img_bg[y_min:y_max, x_min:x_max] = img[: y_max - y_min, : x_max - x_min]
+        else:
+            # Perform alpha blending
+            alpha_img = img[:, :, 3] / 255.0
+            alpha_res = 1.0 - alpha_img
 
-    ):
-        print(img)
-        print(img_bg)
+            for c in range(3):
+                img_bg[y_min:y_max, x_min:x_max, c] = (
+                    alpha_img * img[: y_max - y_min, : x_max - x_min, c]
+                    + alpha_res * img_bg[y_min:y_max, x_min:x_max, c]
+                )
+        return img_bg
 
     @staticmethod
     def _compute_coordinates(
-            img: np.ndarray,
-            img_bg: np.ndarray,
-            centroid: List[float],
+        img: np.ndarray,
+        img_bg: np.ndarray,
+        centroid: List[float],
     ) -> Tuple[int, int, int, int]:
         cx, cy = centroid
         x_min = int(cx - img.shape[1] / 2)
@@ -208,12 +219,11 @@ class ImageGenerator:
 
         return x_min, y_min, x_max, y_max
 
-
     def _process_single_background(
-            self,
-            row: pd.Series,
-            sample_dir: str,
-            save_dir: str,
+        self,
+        row: pd.Series,
+        sample_dir: str,
+        save_dir: str,
     ) -> None:
 
         img_dir = os.path.join(sample_dir, 'images')
@@ -225,47 +235,42 @@ class ImageGenerator:
             img_width=img_layout.shape[1],
         )
 
-        num_objects, _, stats, centroids = cv2.connectedComponentsWithStats(img_layout, connectivity=8)
+        num_objects, _, stats, centroids = cv2.connectedComponentsWithStats(
+            img_layout,
+            connectivity=8,
+        )
 
-        for _ in range(self.num_images_per_bg):
+        for idx in range(self.num_images_per_bg):
             img_paths_selected = self._randomly_select_elements(img_paths, num_objects - 1)
             for object_id, img_path in zip(range(1, num_objects), img_paths_selected):
                 img = self._load_image(img_path)
-                # FIXME: chnage crop for 3 channel image
                 img = self._crop_transparent_images(img)
-                img = cv2.resize(img, dsize=(stats[object_id, cv2.CC_STAT_WIDTH], stats[object_id, cv2.CC_STAT_HEIGHT]))
+                img = cv2.resize(
+                    img,
+                    dsize=(
+                        stats[object_id, cv2.CC_STAT_WIDTH],
+                        stats[object_id, cv2.CC_STAT_HEIGHT],
+                    ),
+                )
 
                 x_min, y_min, x_max, y_max = self._compute_coordinates(
                     img=img,
                     img_bg=img_bg,
-                    centroid=centroids[object_id]
+                    centroid=centroids[object_id],
                 )
 
                 if x_max > x_min and y_max > y_min:
-                    # Check if the background has an alpha channel (only for PNG images)
-                    if img_bg.shape[2] == 4:
-                        # Check if the background is completely transparent
-                        if np.max(img_bg[y_min:y_max, x_min:x_max, 3]) == 0:
-                            # Copy non-transparent parts of the foreground directly onto the background
-                            img_bg[y_min:y_max, x_min:x_max] = img[: y_max - y_min, : x_max - x_min]
-                        else:
-                            # Perform alpha blending
-                            alpha_img = img[:, :, 3] / 255.0
-                            alpha_res = 1.0 - alpha_img
+                    img_bg = self._merge_images(
+                        img=img,
+                        img_bg=img_bg,
+                        x_min=x_min,
+                        y_min=y_min,
+                        x_max=x_max,
+                        y_max=y_max,
+                    )
 
-                            for c in range(3):
-                                img_bg[y_min:y_max, x_min:x_max, c] = (
-                                        alpha_img * img[: y_max - y_min, : x_max - x_min, c]
-                                        + alpha_res * img_bg[y_min:y_max, x_min:x_max, c]
-                                )
-                    else:
-                        # No alpha channel, treat as 3-channel image
-                        img_bg[y_min:y_max, x_min:x_max] = img[: y_max - y_min, : x_max - x_min]
-
-            save_path = os.path.join(sample_save_dir, f'{sample_name}_{idx + 1:02d}.png')
+            save_path = os.path.join(save_dir, f'{row.id}_{idx + 1:02d}.png')
             cv2.imwrite(save_path, img_bg, [cv2.IMWRITE_PNG_COMPRESSION, 6])
-
-
 
     def process_sample(
         self,
@@ -280,7 +285,7 @@ class ImageGenerator:
         os.makedirs(sample_save_dir, exist_ok=True)
 
         # Iterate over layout-background pairs
-        _ = Parallel(n_jobs=1)(     # TODO: set -1
+        _ = Parallel(n_jobs=1)(  # TODO: set -1
             delayed(self._process_single_background)(
                 row=row,
                 sample_dir=sample_dir,
@@ -288,67 +293,6 @@ class ImageGenerator:
             )
             for row in df.itertuples()
         )
-
-
-        for idx, img_back_path in enumerate(bg_paths):
-            img_bg = self._load_background(
-                img_back_path,
-                img_height=img_layout.shape[0],
-                img_width=img_layout.shape[1],
-            )
-
-            img_paths_selected = self._randomly_select_elements(img_paths, num_objects - 1)
-
-            for object_id, img_path in zip(range(1, num_objects), img_paths_selected):
-                cx, cy = centroids[object_id]
-
-                img = self._load_image(img_path)
-                img = self._crop_transparent_images(img)
-                img_size = (
-                    stats[object_id, cv2.CC_STAT_WIDTH],
-                    stats[object_id, cv2.CC_STAT_HEIGHT],
-                )
-                img = cv2.resize(img, dsize=img_size)
-
-                x, y = int(cx - img.shape[1] / 2), int(cy - img.shape[0] / 2)
-                x, y = max(x, 0), max(y, 0)
-
-                x_end, y_end = min(x + img.shape[1], img_bg.shape[1]), min(
-                    y + img.shape[0],
-                    img_bg.shape[0],
-                )
-
-                if x_end > x and y_end > y:
-                    # Check if the background is completely transparent
-                    if np.max(img_bg[y:y_end, x:x_end, 3]) == 0:
-                        # Copy non-transparent parts of the foreground directly onto the background
-                        img_bg[y:y_end, x:x_end] = img[: y_end - y, : x_end - x]
-                    else:
-                        # Perform alpha blending
-                        alpha_img = img[:, :, 3] / 255.0
-                        alpha_res = 1.0 - alpha_img
-
-                        for c in range(3):
-                            img_bg[y:y_end, x:x_end, c] = (
-                                alpha_img * img[: y_end - y, : x_end - x, c]
-                                + alpha_res * img_bg[y:y_end, x:x_end, c]
-                            )
-
-            save_path = os.path.join(sample_save_dir, f'{sample_name}_{idx + 1:02d}.png')
-            cv2.imwrite(save_path, img_bg, [cv2.IMWRITE_PNG_COMPRESSION, 6])
-
-    @staticmethod
-    def get_file_list(
-        src_dir: str,
-        file_template: str,
-    ) -> List[str]:
-        file_list = []
-        for root, dirs, files in os.walk(src_dir):
-            file_list.extend(
-                [os.path.join(root, file) for file in fnmatch.filter(files, file_template)],
-            )
-        file_list.sort()
-        return file_list
 
 
 if __name__ == '__main__':

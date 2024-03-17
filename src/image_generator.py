@@ -311,7 +311,7 @@ class ImageGenerator:
                 sample_dir=sample_dir,
                 save_dir=sample_save_dir,
             )
-            for row in tqdm(df.itertuples())
+            for row in tqdm(df.itertuples(), unit='pairs')
         )
 
 

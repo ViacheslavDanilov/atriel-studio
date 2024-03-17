@@ -2,10 +2,10 @@ defaults:
 - main
 - _self_
 
-data_dir: data/input/highlights
-save_dir: data/output/highlights
-num_images: 10
+data_dir: data/input/highlights/
+save_dir: data/output/highlights/
+num_images_per_bg: 5
 scaling_factor: 1
-include_samples: []   # Example: "01"
-exclude_samples: []   # Example: "01"
+include_samples: []
+exclude_samples: []
 seed: 11

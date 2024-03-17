@@ -365,6 +365,9 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# Gradio
+/flagged/
+
 # DVC files
 .dvc/config.local
 .dvc/tmp

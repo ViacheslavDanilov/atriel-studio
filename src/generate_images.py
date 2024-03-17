@@ -2,12 +2,11 @@ import logging
 import os
 
 import hydra
-from joblib import Parallel, delayed
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.image_generator import ImageGenerator
+from src.image_generator import ImageGenerator, ImageMatcher
 from src.utils import get_dir_list
 
 log = logging.getLogger(__name__)
@@ -26,27 +25,33 @@ def main(cfg: DictConfig) -> None:
     data_dir = os.path.join(PROJECT_DIR, cfg.data_dir)
     save_dir = os.path.join(PROJECT_DIR, cfg.save_dir)
 
+    # Get list of sample_dirs to process
     sample_dirs = get_dir_list(
         data_dir=data_dir,
         include_dirs=cfg.include_samples,
         exclude_dirs=cfg.exclude_samples,
     )
 
-    # Initialize an Image Generator instance
+    # Initialize ImageMatcher and ImageGenerator instances
+    matcher = ImageMatcher()
     generator = ImageGenerator(
-        num_images=cfg.num_images,
+        num_images_per_bg=cfg.num_images_per_bg,
         scaling_factor=cfg.scaling_factor,
         seed=cfg.seed,
     )
 
-    # Parse samples concurrently
-    _ = Parallel(n_jobs=-1)(
-        delayed(generator.process_sample)(
+    # Process samples sequentially
+    for sample_dir in tqdm(sample_dirs, desc='Creating images', unit='samples'):
+        layout_dir = os.path.join(sample_dir, 'layouts')
+        bg_dir = os.path.join(sample_dir, 'backgrounds')
+        layout_paths = matcher.get_file_list(layout_dir, 'layout*.[jpPJ][nNpP][gG]')
+        bg_paths = matcher.get_file_list(bg_dir, 'background*.[jpPJ][nNpP][gG]')
+        df = matcher.create_dataframe(layout_paths, bg_paths)
+        generator.process_sample(
+            df=df,
             sample_dir=sample_dir,
             save_dir=save_dir,
         )
-        for sample_dir in tqdm(sample_dirs)
-    )
 
 
 if __name__ == '__main__':

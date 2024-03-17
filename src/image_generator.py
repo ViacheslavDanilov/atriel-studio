@@ -2,12 +2,13 @@ import fnmatch
 import os
 import random
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import cv2
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from tqdm.auto import tqdm
 
 
 class ImageMatcher:
@@ -36,10 +37,15 @@ class ImageMatcher:
     @staticmethod
     def extract_id(
         path: str,
-    ):
+    ) -> Tuple[str, Union[str, None]]:
         filename = str(Path(path).stem)
-        id = filename.split('_')[1]
-        return id
+        parts = filename.split('_')
+        if len(parts) == 2:  # Format: layout_XX.jpg
+            return parts[1], None
+        elif len(parts) == 3:  # Format: background_XX_Y.jpg
+            return parts[1], parts[2].split('.')[0]
+        else:
+            raise ValueError('Invalid filename format')
 
     def create_dataframe(
         self,
@@ -48,23 +54,25 @@ class ImageMatcher:
     ) -> pd.DataFrame:
 
         file_dict: dict = {
-            'id': [],
-            'layout_path': [],
+            'layout_id': [],
+            'background_id': [],
             'layout_name': [],
-            'background_path': [],
             'background_name': [],
+            'layout_path': [],
+            'background_path': [],
         }
         for bg_path in bg_paths:
-            id_bg = self.extract_id(path=bg_path)
+            id_layout_check, id_bg = self.extract_id(path=bg_path)
             for layout_path in layout_paths:
-                id_layout = self.extract_id(path=layout_path)
+                id_layout, _ = self.extract_id(path=layout_path)
 
-                if id_bg == id_layout:
-                    file_dict['id'].append(id_bg)
-                    file_dict['layout_path'].append(layout_path)
+                if id_layout_check == id_layout:
+                    file_dict['layout_id'].append(id_layout)
+                    file_dict['background_id'].append(id_bg)
                     file_dict['layout_name'].append(Path(layout_path).name)
-                    file_dict['background_path'].append(bg_path)
                     file_dict['background_name'].append(Path(bg_path).name)
+                    file_dict['layout_path'].append(layout_path)
+                    file_dict['background_path'].append(bg_path)
                 else:
                     continue
 
@@ -168,14 +176,21 @@ class ImageGenerator:
         img_path: str,
     ) -> np.ndarray:
         img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
-        # TODO: convert grayscale to RGBA
-        try:
-            if img.shape[2] == 3:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
-        except Exception as e:
-            print(img_path)
-            print(img.shape)
-            print(e)
+
+        # Check if the image is grayscale (1-channel)
+        if len(img.shape) == 2 or (len(img.shape) == 3 and img.shape[2] == 1):
+            # Convert grayscale to 3-channel RGB
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+
+        # Check if the image has 3 channels (RGB)
+        if img.shape[2] == 3:
+            # Convert RGB to 4-channel RGBA
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2RGBA)
+
+        # Check if the image has 4 channels (RGBA)
+        if img.shape[2] == 4:
+            # Ensure that alpha channel values are in the range [0, 255]
+            img[:, :, 3] = np.clip(img[:, :, 3], 0, 255)
         return img
 
     @staticmethod
@@ -269,7 +284,8 @@ class ImageGenerator:
                         y_max=y_max,
                     )
 
-            save_path = os.path.join(save_dir, f'{row.id}_{idx + 1:02d}.png')
+            filename = f'{row.layout_id}_{row.background_id}_{idx + 1:01d}.png'
+            save_path = os.path.join(save_dir, filename)
             cv2.imwrite(save_path, img_bg, [cv2.IMWRITE_PNG_COMPRESSION, 6])
 
     def process_sample(
@@ -285,13 +301,13 @@ class ImageGenerator:
         os.makedirs(sample_save_dir, exist_ok=True)
 
         # Iterate over layout-background pairs
-        _ = Parallel(n_jobs=1)(  # TODO: set -1
+        _ = Parallel(n_jobs=-1)(
             delayed(self._process_single_background)(
                 row=row,
                 sample_dir=sample_dir,
-                save_dir=save_dir,
+                save_dir=sample_save_dir,
             )
-            for row in df.itertuples()
+            for row in tqdm(df.itertuples())
         )
 
 
@@ -309,8 +325,8 @@ if __name__ == '__main__':
     df = matcher.create_dataframe(layout_paths, bg_paths)
 
     processor = ImageGenerator(
-        num_images_per_bg=5,
-        scaling_factor=2,
+        num_images_per_bg=3,
+        scaling_factor=1,
         seed=11,
     )
     processor.process_sample(

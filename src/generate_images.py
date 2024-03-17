@@ -32,7 +32,7 @@ def main(cfg: DictConfig) -> None:
         exclude_dirs=cfg.exclude_samples,
     )
 
-    # Initialize ImageMatcher and ImageGenerator instance
+    # Initialize ImageMatcher and ImageGenerator instances
     matcher = ImageMatcher()
     generator = ImageGenerator(
         num_images_per_bg=cfg.num_images_per_bg,
@@ -40,7 +40,7 @@ def main(cfg: DictConfig) -> None:
         seed=cfg.seed,
     )
 
-    # Process sample sequentially
+    # Process samples sequentially
     for sample_dir in tqdm(sample_dirs, desc='Creating images', unit='samples'):
         layout_dir = os.path.join(sample_dir, 'layouts')
         bg_dir = os.path.join(sample_dir, 'backgrounds')

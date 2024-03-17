@@ -2,8 +2,8 @@ defaults:
 - main
 - _self_
 
-data_dir: data/input/highlights
-save_dir: data/output/highlights
+data_dir: data/input/stories/marketing_01
+save_dir: data/output/stories/
 num_images: 10
 scaling_factor: 1
 include_samples: []   # Example: "01"

@@ -16,5 +16,6 @@ dependencies:
   - opencv-python==4.9.0.80
   - paramiko==3.4.0
   - pre-commit==3.6.2
+  - python-dotenv==1.0.1
   - scikit-image==0.22.0
   - tqdm==4.66.2

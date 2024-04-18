@@ -1,6 +1,7 @@
 import os
 
 import paramiko  # type: ignore
+from dotenv import load_dotenv
 
 
 class SSHFileTransfer:
@@ -59,6 +60,7 @@ class SSHFileTransfer:
 
 
 if __name__ == '__main__':
+    load_dotenv()
     hostname = os.environ.get('HOSTNAME')
     username = os.environ.get('USERNAME')
     password = os.environ.get('PASSWORD')

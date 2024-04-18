@@ -1,4 +1,6 @@
 import os
+import webbrowser
+from pathlib import Path
 
 import paramiko  # type: ignore
 from dotenv import load_dotenv
@@ -50,12 +52,16 @@ class SSHFileTransfer:
         self,
         local_path: str,
         remote_path: str,
-    ):
+    ) -> str:
         try:
             self.sftp.put(local_path, remote_path)  # type: ignore
             print('File uploaded successfully!')
+            file_url = self._get_file_url(remote_path)
         except Exception as e:
             print(f"Error: {e}")
+            file_url = ''
+
+        return file_url
 
     def download_file(
         self,
@@ -68,25 +74,25 @@ class SSHFileTransfer:
         except Exception as e:
             print(f"Error: {e}")
 
-    def create_remote_dir(
-        self,
-        remote_dir: str,
-    ):
+    def create_remote_dir(self, remote_dir: str) -> None:
         try:
             self.ssh.exec_command(f"mkdir -p {remote_dir}")  # type: ignore
             print(f"Remote directory '{remote_dir}' created successfully!")
         except Exception as e:
             print(f"Error: {e}")
 
-    def remove_remote_dir(
-        self,
-        remote_dir: str,
-    ):
+    def remove_remote_dir(self, remote_dir: str) -> None:
         try:
             self.ssh.exec_command(f"rm -rf {remote_dir}")  # type: ignore
             print(f"Remote directory '{remote_dir}' and its contents removed successfully!")
         except Exception as e:
             print(f"Error: {e}")
+
+    def _get_file_url(self, remote_path: str) -> str:
+        file_path = Path(remote_path)
+        truncated_path = Path(*file_path.parts[4:])
+        file_url = os.path.join(self.url, truncated_path)
+        return file_url
 
 
 if __name__ == '__main__':
@@ -107,17 +113,18 @@ if __name__ == '__main__':
     )
 
     # Upload image
-    local_path = 'data/test-hero.jpg'
-    remote_dir = os.path.join(remote_root_dir, 'abc')
-    remote_path = os.path.join(remote_dir, 'test-hero.jpg')
+    local_path = 'data/test-img.jpg'
+    remote_dir = os.path.join(remote_root_dir, 'test-dir')
+    remote_path = os.path.join(remote_dir, Path(local_path).name)
     ssh_file_transfer.connect()
     ssh_file_transfer.create_remote_dir(remote_dir)
-    ssh_file_transfer.upload_file(local_path=local_path, remote_path=remote_path)
+    file_url = ssh_file_transfer.upload_file(local_path=local_path, remote_path=remote_path)
+    webbrowser.open(file_url, new=2)
     ssh_file_transfer.disconnect()
 
     # Download image
     local_path = 'data/test-hero-downloaded.jpg'
     ssh_file_transfer.connect()
     ssh_file_transfer.download_file(remote_path=remote_path, local_path=local_path)
-    ssh_file_transfer.remove_remote_dir(remote_dir=remote_dir)
+    # ssh_file_transfer.remove_remote_dir(remote_dir=remote_dir)
     ssh_file_transfer.disconnect()

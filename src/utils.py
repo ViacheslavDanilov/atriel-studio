@@ -3,6 +3,16 @@ import os
 from pathlib import Path
 from typing import List
 
+CSV_COLUMNS = [
+    'Title',
+    'Media URL',
+    'Pinterest board',
+    'Thumbnail',
+    'Description',
+    'Link',
+    'Keywords',
+]
+
 
 def get_file_list(
     directory: str,

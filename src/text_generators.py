@@ -2,7 +2,6 @@ import random
 from typing import List
 
 import pandas as pd
-from tqdm import tqdm
 
 
 class TitleGenerator:
@@ -26,9 +25,8 @@ class TitleGenerator:
         self,
         num_titles: int,
     ) -> List[str]:
-
-        result = []
-        for idx in tqdm(range(num_titles)):
+        result: List[str] = []
+        for _ in range(num_titles):
             keyword_list = self.df[self.keyword_column].tolist()
             output_list = []
             used_keywords = set()
@@ -63,9 +61,10 @@ class DescriptionGenerator:
 
     def __init__(
         self,
-        df_desc: pd.DataFrame,
+        df: pd.DataFrame,
     ) -> None:
-        self.descriptions = df_desc['Description'].tolist()
+        self.descriptions = df['Description'].tolist()
+        self.unique_descriptions = set(self.descriptions)
         random.shuffle(self.descriptions)
         self.prev_desc = None
 
@@ -73,28 +72,36 @@ class DescriptionGenerator:
         self,
         num_descriptions: int,
     ) -> List[str]:
-        result = []
-        for desc in self.descriptions:
-            if desc != self.prev_desc:
-                result.append(desc)
-                self.prev_desc = desc
-                if len(result) == num_descriptions:
+        result: List[str] = []
+        remaining_unique = self.unique_descriptions.copy()
+
+        while len(result) < num_descriptions:
+            if self.prev_desc is not None:
+                remaining_unique.discard(self.prev_desc)
+
+            remaining_descriptions = list(remaining_unique)
+            random.shuffle(remaining_descriptions)
+
+            for desc in remaining_descriptions:
+                if desc != self.prev_desc:
+                    result.append(desc)
+                    self.prev_desc = desc
+                    remaining_unique.discard(desc)
                     break
 
-        # Not enough unique descriptions, fill the remaining with repeats
-        if len(result) < num_descriptions:
-            remaining = num_descriptions - len(result)
-            unique_descriptions = set(self.descriptions)
-            remaining_descriptions = [
-                desc for desc in unique_descriptions if desc != self.prev_desc
-            ]
-            random.shuffle(remaining_descriptions)
-            result.extend(remaining_descriptions[:remaining])
-
-        return result
+            if not remaining_unique:
+                random.shuffle(self.descriptions)
+                for desc in self.descriptions:
+                    if desc != self.prev_desc:
+                        result.append(desc)
+                        self.prev_desc = desc
+                        break
+        return result[:num_descriptions]
 
 
 if __name__ == '__main__':
+
+    num_images = 85
     # Test TitleGenerator
     keyword_path = 'data/step_2/ds_01/highlights/black-celestial/keywords.csv'
     df = pd.read_csv(keyword_path)
@@ -104,12 +111,12 @@ if __name__ == '__main__':
         desired_length=80,
         max_limit=150,
     )
-    generated_titles = title_generator.generate_titles(num_titles=50)
-    print('Generated Titles:', generated_titles)
+    title_list = title_generator.generate_titles(num_titles=num_images)
+    print('Generated Titles:', title_list)
 
     # Test DescriptionGenerator object
     description_path = 'data/step_2/ds_01/highlights/black-celestial/descriptions.csv'
     df = pd.read_csv(description_path)
-    desc_generator = DescriptionGenerator(df_desc=df)
-    generated_descriptions = desc_generator.generate_descriptions(num_descriptions=10)
-    print('Generated Descriptions:', generated_descriptions)
+    desc_generator = DescriptionGenerator(df=df)
+    desc_list = desc_generator.generate_descriptions(num_descriptions=num_images)
+    print('Generated Descriptions:', desc_list)

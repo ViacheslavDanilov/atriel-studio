@@ -2,6 +2,7 @@ import random
 from typing import List
 
 import pandas as pd
+from tqdm import tqdm
 
 
 class TitleGenerator:
@@ -10,37 +11,51 @@ class TitleGenerator:
     def __init__(
         self,
         df: pd.DataFrame,
-        keyword_column: str,
-        desired_length: int = 100,
-        character_limit: int = 150,
+        keyword_column: str = 'Keywords',
+        desired_length: int = 90,
+        max_limit: int = 150,
         delimiter: str = ' - ',
     ):
         self.df = df
         self.keyword_column = keyword_column
-        self.character_limit = character_limit
+        self.max_limit = max_limit
         self.desired_length = desired_length
         self.delimiter = delimiter
 
-    def generate_title(self) -> str:
-        keyword_list = self.df[self.keyword_column].tolist()
-        output_list = []
-        used_keywords = set()
-        while True:
-            if len(keyword_list) > 0:
-                keyword = random.choice(keyword_list).capitalize()
-            else:
-                raise ValueError('Add more keywords or change min and max limits')
-            if keyword in used_keywords:
-                continue  # Skip if keyword is already used
-            keyword_list = [v for v in keyword_list if v != keyword]
-            output_list.append(keyword)
-            used_keywords.add(keyword)
-            title = self.delimiter.join(output_list)
-            title_length = len(title)
-            if self.desired_length <= title_length <= self.character_limit:
-                return title
-            elif title_length > self.character_limit:
-                output_list.pop()  # Remove the last added keyword if title exceeds character limit
+    def generate_titles(
+        self,
+        num_titles: int,
+    ) -> List[str]:
+
+        result = []
+        for idx in tqdm(range(num_titles)):
+            keyword_list = self.df[self.keyword_column].tolist()
+            output_list = []
+            used_keywords = set()
+            attempt_count = 0  # Track the number of attempts to construct a title
+            while True:
+                attempt_count += 1
+                if attempt_count > 10:  # Limit the number of attempts
+                    raise ValueError(
+                        'Failed to construct a title. Add more keywords or change min and max limits',
+                    )
+                if len(keyword_list) > 0:
+                    keyword = random.choice(keyword_list).capitalize()
+                else:
+                    raise ValueError('Add more keywords or change min and max limits')
+                if keyword in used_keywords:
+                    continue  # Skip if keyword is already used
+                keyword_list = [v for v in keyword_list if v != keyword]
+                output_list.append(keyword)
+                used_keywords.add(keyword)
+                title = self.delimiter.join(output_list)
+                title_length = len(title)
+                if self.desired_length <= title_length <= self.max_limit:
+                    result.append(title)
+                    break
+                elif title_length > self.max_limit:
+                    output_list.pop()  # Remove the last added keyword if title exceeds character limit
+        return result
 
 
 class DescriptionGenerator:
@@ -86,12 +101,11 @@ if __name__ == '__main__':
     title_generator = TitleGenerator(
         df=df,
         keyword_column='Keywords',
-        desired_length=100,
-        character_limit=150,
+        desired_length=90,
+        max_limit=150,
     )
-    generated_title = title_generator.generate_title()
-    print('Title length:', len(generated_title))
-    print('Generated Title:', generated_title)
+    generated_titles = title_generator.generate_titles(num_titles=50)
+    print('Generated Titles:', generated_titles)
 
     # Test DescriptionGenerator object
     description_path = 'data/step_2/ds_01/highlights/black-celestial/descriptions.csv'

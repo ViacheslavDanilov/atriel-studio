@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 from glob import glob
 from pathlib import Path
 from typing import List
@@ -10,6 +9,7 @@ import pandas as pd
 from omegaconf import DictConfig, OmegaConf
 
 from src import PROJECT_DIR
+from src.text_generators import DescriptionGenerator, TitleGenerator
 from src.utils import CSV_COLUMNS
 
 log = logging.getLogger(__name__)
@@ -44,33 +44,6 @@ def generate_sample_df(
     return df
 
 
-def generate_sample_descriptions(
-    num_descriptions: int,
-    df_desc: pd.DataFrame,
-) -> List[str]:
-    descriptions = df_desc['Description'].tolist()
-    random.shuffle(descriptions)
-    result = []
-    prev_desc = None
-
-    for desc in descriptions:
-        if desc != prev_desc:
-            result.append(desc)
-            prev_desc = desc
-            if len(result) == num_descriptions:
-                break
-
-    # Not enough unique descriptions, fill the remaining with repeats
-    if len(result) < num_descriptions:
-        remaining = num_descriptions - len(result)
-        unique_descriptions = set(descriptions)
-        remaining_descriptions = [desc for desc in unique_descriptions if desc != prev_desc]
-        random.shuffle(remaining_descriptions)
-        result.extend(remaining_descriptions[:remaining])
-
-    return result
-
-
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
     config_name='generate_pintereset_csv',
@@ -87,13 +60,21 @@ def main(cfg: DictConfig) -> None:
     sample_paths = glob(os.path.join(data_dir, '*/*'))
     for sample_path in sample_paths:
         img_paths = glob(os.path.join(sample_path, '*/*.[jpPJ][nNpP][gG]'))
-        df_desc = pd.read_csv(os.path.join(sample_path, 'descriptions.csv'))
+
+        # Prepare a list of titles
         df_key = pd.read_csv(os.path.join(sample_path, 'keywords.csv'))
-        desc_list = generate_sample_descriptions(
-            num_descriptions=len(img_paths),
-            df_desc=df_desc,
-        )
-        print(df_key, desc_list)
+        title_generator = TitleGenerator(df_key)
+        title_list = title_generator.generate_titles(num_titles=len(img_paths))
+
+        # Prepare a list of descriptions
+        df_desc = pd.read_csv(os.path.join(sample_path, 'descriptions.csv'))
+        desc_generator = DescriptionGenerator(df_desc)
+        desc_list = desc_generator.generate_descriptions(num_descriptions=len(img_paths))
+
+        # Prepare a list of keywords
+        keyword_list = [''] * len(img_paths)
+
+        print(title_list, desc_list, keyword_list)
 
     log.info('Complete')
 

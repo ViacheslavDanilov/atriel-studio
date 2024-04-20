@@ -1,4 +1,5 @@
 import random
+from typing import List
 
 import pandas as pd
 
@@ -42,20 +43,59 @@ class TitleGenerator:
                 output_list.pop()  # Remove the last added keyword if title exceeds character limit
 
 
-if __name__ == '__main__':
-    # Create a sample DataFrame
-    keywords_path = 'data/step_2/highlights/black_celestial/keywords.csv'
-    df = pd.read_csv(keywords_path)
+class DescriptionGenerator:
+    """A class for generating a list of descriptions with diversity and randomness."""
 
-    # Initialize TitleGenerator object
+    def __init__(
+        self,
+        df_desc: pd.DataFrame,
+    ) -> None:
+        self.descriptions = df_desc['Description'].tolist()
+        random.shuffle(self.descriptions)
+        self.prev_desc = None
+
+    def generate_descriptions(
+        self,
+        num_descriptions: int,
+    ) -> List[str]:
+        result = []
+        for desc in self.descriptions:
+            if desc != self.prev_desc:
+                result.append(desc)
+                self.prev_desc = desc
+                if len(result) == num_descriptions:
+                    break
+
+        # Not enough unique descriptions, fill the remaining with repeats
+        if len(result) < num_descriptions:
+            remaining = num_descriptions - len(result)
+            unique_descriptions = set(self.descriptions)
+            remaining_descriptions = [
+                desc for desc in unique_descriptions if desc != self.prev_desc
+            ]
+            random.shuffle(remaining_descriptions)
+            result.extend(remaining_descriptions[:remaining])
+
+        return result
+
+
+if __name__ == '__main__':
+    # Test TitleGenerator
+    keyword_path = 'data/step_2/ds_01/highlights/black-celestial/keywords.csv'
+    df = pd.read_csv(keyword_path)
     title_generator = TitleGenerator(
         df=df,
         keyword_column='Keywords',
         desired_length=100,
         character_limit=150,
     )
-
-    # Generate title
     generated_title = title_generator.generate_title()
     print('Title length:', len(generated_title))
     print('Generated Title:', generated_title)
+
+    # Test DescriptionGenerator object
+    description_path = 'data/step_2/ds_01/highlights/black-celestial/descriptions.csv'
+    df = pd.read_csv(description_path)
+    desc_generator = DescriptionGenerator(df_desc=df)
+    generated_descriptions = desc_generator.generate_descriptions(num_descriptions=10)
+    print('Generated Descriptions:', generated_descriptions)

@@ -12,7 +12,7 @@ class TitleGenerator:
         self,
         df: pd.DataFrame,
         keyword_column: str = 'Keywords',
-        desired_length: int = 90,
+        desired_length: int = 80,
         max_limit: int = 150,
         delimiter: str = ' - ',
     ):
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     title_generator = TitleGenerator(
         df=df,
         keyword_column='Keywords',
-        desired_length=90,
+        desired_length=80,
         max_limit=150,
     )
     generated_titles = title_generator.generate_titles(num_titles=50)

@@ -102,6 +102,8 @@ class DescriptionGenerator:
 
 
 class PublishDateGenerator:
+    """A class to generate publish dates and times."""
+
     def __init__(
         self,
         num_times_per_day: int,

@@ -2,7 +2,7 @@ import os
 import webbrowser
 from pathlib import Path
 
-import paramiko  # type: ignore
+import paramiko
 from dotenv import load_dotenv
 
 
@@ -22,8 +22,6 @@ class SSHFileTransfer:
         self.port = port
         self.password = password
         self.url = url
-        self.ssh = None
-        self.sftp = None
 
     def connect(self):
         # Create SSH client
@@ -54,7 +52,7 @@ class SSHFileTransfer:
         remote_path: str,
     ) -> str:
         try:
-            self.sftp.put(local_path, remote_path)  # type: ignore
+            self.sftp.put(local_path, remote_path)
             print('File uploaded successfully!')
             file_url = self._get_file_url(remote_path)
         except Exception as e:
@@ -69,21 +67,21 @@ class SSHFileTransfer:
         local_path: str,
     ):
         try:
-            self.sftp.get(remote_path, local_path)  # type: ignore
+            self.sftp.get(remote_path, local_path)
             print('File downloaded successfully!')
         except Exception as e:
             print(f"Error: {e}")
 
     def create_remote_dir(self, remote_dir: str) -> None:
         try:
-            self.ssh.exec_command(f"mkdir -p {remote_dir}")  # type: ignore
+            self.ssh.exec_command(f"mkdir -p {remote_dir}")
             print(f"Remote directory '{remote_dir}' created successfully!")
         except Exception as e:
             print(f"Error: {e}")
 
     def remove_remote_dir(self, remote_dir: str) -> None:
         try:
-            self.ssh.exec_command(f"rm -rf {remote_dir}")  # type: ignore
+            self.ssh.exec_command(f"rm -rf {remote_dir}")
             print(f"Remote directory '{remote_dir}' and its contents removed successfully!")
         except Exception as e:
             print(f"Error: {e}")

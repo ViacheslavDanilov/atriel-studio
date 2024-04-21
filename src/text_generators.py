@@ -1,7 +1,9 @@
+import datetime
 import random
 from typing import List
 
 import pandas as pd
+import pytz
 
 
 class TitleGenerator:
@@ -99,10 +101,63 @@ class DescriptionGenerator:
         return result[:num_descriptions]
 
 
+class PublishDateGenerator:
+    def __init__(
+        self,
+        num_times_per_day: int,
+        total_times: int,
+        start_date: str = None,
+        default_times: dict = None,
+    ):
+        self.num_times_per_day = num_times_per_day
+        self.total_times = total_times
+        if start_date is None:
+            self.start_date = datetime.datetime.now()
+        else:
+            self.start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        if default_times is None:
+            self.default_times = {
+                'Monday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
+                'Tuesday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
+                'Wednesday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
+                'Thursday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
+                'Friday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
+                'Saturday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
+                'Sunday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
+            }
+        else:
+            self.default_times = default_times
+
+    def generate_times(self):
+        utc = pytz.UTC
+        publish_date_time_list = []
+        current_date = self.start_date
+        for i in range(self.total_times):
+            publish_date_time = current_date + datetime.timedelta(days=i // self.num_times_per_day)
+            day_of_week = publish_date_time.strftime('%A')
+            times_for_day = self.default_times.get(
+                day_of_week,
+                ['09:00:00'],
+            )  # Default time is 09:00:00 if not specified
+            time_index = i % len(times_for_day)
+            default_time = times_for_day[time_index]
+            publish_date_time = utc.localize(
+                publish_date_time.replace(
+                    hour=int(default_time[:2]),
+                    minute=int(default_time[3:5]),
+                    second=int(default_time[6:]),
+                ),
+            )
+            publish_date_time_list.append(publish_date_time.strftime('%Y-%m-%dT%H:%M:%S'))
+            if (i + 1) % self.num_times_per_day == 0:
+                current_date += datetime.timedelta(days=1)
+        return publish_date_time_list
+
+
 if __name__ == '__main__':
 
     num_images = 85
-    # Test TitleGenerator
+    # Test TitleGenerator class
     keyword_path = 'data/step_2/ds-01/highlights/black-celestial/keywords.csv'
     df = pd.read_csv(keyword_path)
     title_generator = TitleGenerator(
@@ -114,9 +169,18 @@ if __name__ == '__main__':
     title_list = title_generator.generate_titles(num_titles=num_images)
     print('Generated Titles:', title_list)
 
-    # Test DescriptionGenerator object
+    # Test DescriptionGenerator class
     description_path = 'data/step_2/ds-01/highlights/black-celestial/descriptions.csv'
     df = pd.read_csv(description_path)
     desc_generator = DescriptionGenerator(df=df)
     desc_list = desc_generator.generate_descriptions(num_descriptions=num_images)
     print('Generated Descriptions:', desc_list)
+
+    # Test PublishDateGenerator class
+    publish_date_generator = PublishDateGenerator(
+        num_times_per_day=5,
+        total_times=30,
+        start_date='2024-04-06',
+    )
+    time_list = publish_date_generator.generate_times()
+    print('Generated Times:', time_list)

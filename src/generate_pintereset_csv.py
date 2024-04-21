@@ -1,4 +1,3 @@
-import datetime
 import logging
 import os
 from glob import glob
@@ -59,23 +58,6 @@ def get_file_url(
     truncated_path = Path(*file_path.parts[4:])
     file_url = os.path.join(url, truncated_path)
     return file_url
-
-
-def generate_publish_dates(
-    num_pins_per_day: int,
-    total_pins: int = None,
-    start_date: datetime.date = None,
-):
-    if start_date is None:
-        start_date = datetime.date.today()
-    else:
-        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
-
-    publish_date_list = []
-    for i in range(total_pins):
-        publish_date = start_date + datetime.timedelta(days=i // num_pins_per_day)
-        publish_date_list.append(publish_date.strftime('%Y-%m-%d'))
-    return publish_date_list
 
 
 @hydra.main(
@@ -140,12 +122,12 @@ def main(cfg: DictConfig) -> None:
         df['Description'] = desc_list
 
         # Prepare a list of links
-        link_list = [''] * len(img_paths)
+        link_list = [URL] * len(img_paths)  # TODO: Replace current URL with ad links
         df['Link'] = link_list
 
         # TODO: Prepare a list of publish dates
-        publish_date_list = generate_publish_dates(cfg.num_pins_per_day, total_pins=len(img_paths))
-        df['Publish date'] = publish_date_list
+        # publish_date_list = generate_publish_dates(cfg.num_pins_per_day, total_pins=len(img_paths))
+        # df['Publish date'] = publish_date_list
 
         # Prepare a list of keywords
         keyword_list = [''] * len(img_paths)

@@ -2,7 +2,7 @@ defaults:
 - main
 - _self_
 
-data_dir: data/step_2/ds_01/
+data_dir: data/step_2/ds-01/
 save_dir: data/step_2/ds_01_csv/
 num_images_per_csv: 10
 seed: 11

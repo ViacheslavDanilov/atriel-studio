@@ -10,6 +10,7 @@ CSV_COLUMNS = [
     'Thumbnail',
     'Description',
     'Link',
+    'Publish date',
     'Keywords',
 ]
 

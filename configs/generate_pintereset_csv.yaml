@@ -6,4 +6,5 @@ data_dir: data/step_2/ds-01/
 save_dir: data/step_2/ds_01_csv/
 num_pins_per_day: 10
 num_images_per_csv: 200
+start_date: 2024-04-21
 seed: 11

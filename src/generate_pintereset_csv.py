@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from omegaconf import DictConfig, OmegaConf
 
 from src import PROJECT_DIR
-from src.text_generators import DescriptionGenerator, TitleGenerator
+from src.generators import DescriptionGenerator, PublishDateGenerator, TitleGenerator
 from src.utils import CSV_COLUMNS
 
 log = logging.getLogger(__name__)
@@ -126,16 +126,25 @@ def main(cfg: DictConfig) -> None:
         df['Link'] = link_list
 
         # TODO: Prepare a list of publish dates
-        # publish_date_list = generate_publish_dates(cfg.num_pins_per_day, total_pins=len(img_paths))
-        # df['Publish date'] = publish_date_list
+        publish_date_generator = PublishDateGenerator(
+            num_times_per_day=cfg.num_pins_per_day,
+            total_times=len(img_paths),
+            start_date=cfg.start_date,
+        )
+        publish_date_list = publish_date_generator.generate_times()
+        df['Publish date'] = publish_date_list
 
         # Prepare a list of keywords
         keyword_list = [''] * len(img_paths)
         df['Keywords'] = keyword_list
 
-        df.to_csv(os.path.join(save_dir, f'{extract_id(sample_path)}.csv'))
-
-        print(title_list, desc_list, keyword_list)
+    # TODO: Save final CSVs with emojis
+    os.makedirs(save_dir, exist_ok=True)
+    df.to_csv(
+        os.path.join(save_dir, 'pins.csv'),
+        index=False,
+        encoding='utf-8',
+    )
 
     log.info('Complete')
 

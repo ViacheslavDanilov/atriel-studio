@@ -40,7 +40,7 @@ def extract_id(
         raise ValueError('Invalid type')
 
 
-def get_image_remote_path(
+def get_file_remote_path(
     img_path: str,
     remote_root_dir: str,
 ) -> str:
@@ -48,6 +48,16 @@ def get_image_remote_path(
     relative_path = '/'.join(parts)
     img_remote_path = os.path.join(remote_root_dir, relative_path)
     return img_remote_path
+
+
+def get_file_url(
+    remote_path: str,
+    url: str,
+) -> str:
+    file_path = Path(remote_path)
+    truncated_path = Path(*file_path.parts[4:])
+    file_url = os.path.join(url, truncated_path)
+    return file_url
 
 
 @hydra.main(
@@ -83,9 +93,17 @@ def main(cfg: DictConfig) -> None:
 
         # Prepare a list of remote image paths
         remote_img_path_list = [
-            get_image_remote_path(img_path, REMOTE_ROOT_DIR) for img_path in img_paths
+            get_file_remote_path(img_path, REMOTE_ROOT_DIR) for img_path in img_paths
         ]
         df['dst_path'] = remote_img_path_list
+
+        # Prepare a list of image URLs
+        url_list = [get_file_url(remote_img_path, URL) for remote_img_path in remote_img_path_list]
+        df['Media URL'] = url_list
+
+        # Prepare a list of pinterest boards
+        board_list = [category.capitalize() for category in category_list]
+        df['Pinterest board'] = board_list
 
         # Prepare a list of titles
         df_key = pd.read_csv(os.path.join(sample_path, 'keywords.csv'))

@@ -2,6 +2,7 @@ import logging
 import os
 from glob import glob
 from pathlib import Path
+from typing import List
 
 import hydra
 import pandas as pd
@@ -61,9 +62,12 @@ def get_file_url(
     return file_url
 
 
-def process_sample(sample_path: str) -> pd.DataFrame:
+def process_sample(
+    sample_path: str,
+    column_names: List[str] = CSV_COLUMNS,
+) -> pd.DataFrame:
     # Initialize dataframe
-    df = pd.DataFrame(columns=CSV_COLUMNS)
+    df = pd.DataFrame(columns=column_names)
 
     # Supplementary information
     img_paths = glob(os.path.join(sample_path, '*/*.[jpPJ][nNpP][gG]'))
@@ -133,11 +137,17 @@ def save_csv_files(
     for i in range(num_csv_files):
         start_idx = i * num_pins_per_csv
         end_idx = min((i + 1) * num_pins_per_csv, len(df))
-        chunk_df = df.iloc[start_idx:end_idx]
+        df_chunk = df.iloc[start_idx:end_idx]
 
-        # Save chunk to CSV
-        chunk_df.to_csv(
-            os.path.join(save_dir, f'pins_{i+1}.csv'),
+        # Get the earliest publish date in the chunk and format it as DDMMYY
+        earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
+        formatted_date = earliest_publish_date.strftime('%d%m%y')
+
+        # Save chunk to CSV with filename based on the formatted date
+        csv_filename = f'pins_{formatted_date}.csv'
+        csv_filepath = os.path.join(save_dir, csv_filename)
+        df_chunk.to_csv(
+            csv_filepath,
             index=False,
             encoding='utf-8',
         )
@@ -161,7 +171,7 @@ def main(cfg: DictConfig) -> None:
     # Process samples by their paths
     df_list = []
     for sample_path in tqdm(sample_paths, desc='Processing samples', unit='samples'):
-        df = process_sample(sample_path)
+        df = process_sample(sample_path, column_names=CSV_COLUMNS)
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 
@@ -175,6 +185,7 @@ def main(cfg: DictConfig) -> None:
     df['Publish date'] = publish_date_list
 
     # Save final CSVs
+    df = df[CSV_COLUMNS]
     save_csv_files(df=df, save_dir=save_dir, num_pins_per_csv=cfg.num_pins_per_csv)
 
     log.info('Complete')

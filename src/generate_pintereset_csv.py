@@ -120,6 +120,29 @@ def process_sample(sample_path: str) -> pd.DataFrame:
     return df
 
 
+def save_csv_files(
+    df: pd.DataFrame,
+    save_dir: str,
+    num_pins_per_csv: int = 200,
+) -> None:
+    # Calculate the number of CSV files needed
+    num_csv_files = -(-len(df) // num_pins_per_csv)
+
+    # Split DataFrame into chunks and save each chunk to a separate CSV file
+    os.makedirs(save_dir, exist_ok=True)
+    for i in range(num_csv_files):
+        start_idx = i * num_pins_per_csv
+        end_idx = min((i + 1) * num_pins_per_csv, len(df))
+        chunk_df = df.iloc[start_idx:end_idx]
+
+        # Save chunk to CSV
+        chunk_df.to_csv(
+            os.path.join(save_dir, f'pins_{i+1}.csv'),
+            index=False,
+            encoding='utf-8',
+        )
+
+
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
     config_name='generate_pintereset_csv',
@@ -152,13 +175,7 @@ def main(cfg: DictConfig) -> None:
     df['Publish date'] = publish_date_list
 
     # Save final CSVs
-    os.makedirs(save_dir, exist_ok=True)
-    df = df.astype(str)
-    df.to_csv(
-        os.path.join(save_dir, 'pins.csv'),
-        index=False,
-        encoding='utf-8',
-    )
+    save_csv_files(df=df, save_dir=save_dir, num_pins_per_csv=cfg.num_pins_per_csv)
 
     log.info('Complete')
 

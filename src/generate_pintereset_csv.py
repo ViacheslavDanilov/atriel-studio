@@ -7,6 +7,7 @@ import hydra
 import pandas as pd
 from dotenv import load_dotenv
 from omegaconf import DictConfig, OmegaConf
+from tqdm import tqdm
 
 from src import PROJECT_DIR
 from src.generators import DescriptionGenerator, PublishDateGenerator, TitleGenerator
@@ -60,6 +61,65 @@ def get_file_url(
     return file_url
 
 
+def process_sample(sample_path: str) -> pd.DataFrame:
+    # Initialize dataframe
+    df = pd.DataFrame(columns=CSV_COLUMNS)
+
+    # Supplementary information
+    img_paths = glob(os.path.join(sample_path, '*/*.[jpPJ][nNpP][gG]'))
+    img_names = [Path(img_path).name for img_path in img_paths]
+    category_list = [extract_id(img_path, 'category') for img_path in img_paths]
+    sample_names = [extract_id(img_path, 'sample_name') for img_path in img_paths]
+    sample_ids = [extract_id(img_path, 'sample_id') for img_path in img_paths]
+    df['category'] = category_list
+    df['sample_name'] = sample_names
+    df['sample_id'] = sample_ids
+    df['sample_id'] = df['sample_id'].astype(str)
+    df['img_name'] = img_names
+    df['src_path'] = img_paths
+
+    # Image paths
+    remote_img_path_list = [
+        get_file_remote_path(img_path, REMOTE_ROOT_DIR) for img_path in img_paths
+    ]
+    df['dst_path'] = remote_img_path_list
+
+    # Titles
+    df_key = pd.read_csv(os.path.join(sample_path, 'keywords.csv'))
+    title_generator = TitleGenerator(df_key)
+    title_list = title_generator.generate_titles(num_titles=len(img_paths))
+    df['Title'] = title_list
+
+    # URLs
+    url_list = [get_file_url(remote_img_path, URL) for remote_img_path in remote_img_path_list]
+    df['Media URL'] = url_list
+
+    # Pinterest boards
+    board_list = [category.replace('_', ' ').title() for category in category_list]
+    df['Pinterest board'] = board_list
+
+    # Thumbnails
+    thumbnail_list = [''] * len(img_paths)
+    df['Thumbnail'] = thumbnail_list
+
+    # Descriptions
+    df_desc = pd.read_csv(os.path.join(sample_path, 'descriptions.csv'))
+    desc_generator = DescriptionGenerator(df_desc)
+    desc_list = desc_generator.generate_descriptions(num_descriptions=len(img_paths))
+    df['Description'] = desc_list
+
+    # Links
+    df_links = pd.read_csv(os.path.join(sample_path, 'links.csv'), dtype={'sample_id': str})
+    sample_id_to_link = df_links.set_index('sample_id')['link'].to_dict()
+    df['Link'] = df['sample_id'].map(sample_id_to_link)
+
+    # Keywords
+    keyword_list = [''] * len(img_paths)
+    df['Keywords'] = keyword_list
+
+    return df
+
+
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
     config_name='generate_pintereset_csv',
@@ -74,72 +134,26 @@ def main(cfg: DictConfig) -> None:
     print(save_dir)
 
     sample_paths = glob(os.path.join(data_dir, '*/*'))
-    for sample_path in sample_paths:
 
-        # Initialize dataframe
-        df = pd.DataFrame(columns=CSV_COLUMNS)
+    # Process samples by their paths
+    df_list = []
+    for sample_path in tqdm(sample_paths, desc='Processing samples', unit='samples'):
+        df = process_sample(sample_path)
+        df_list.append(df)
+    df = pd.concat(df_list, ignore_index=True)
 
-        # Get list of image paths
-        img_paths = glob(os.path.join(sample_path, '*/*.[jpPJ][nNpP][gG]'))
-        img_names = [Path(img_path).name for img_path in img_paths]
-        category_list = [extract_id(img_path, 'category') for img_path in img_paths]
-        sample_names = [extract_id(img_path, 'sample_name') for img_path in img_paths]
-        sample_ids = [extract_id(img_path, 'sample_id') for img_path in img_paths]
-        df['category'] = category_list
-        df['sample_name'] = sample_names
-        df['sample_id'] = sample_ids
-        df['img_name'] = img_names
-        df['src_path'] = img_paths
+    # Add publish dates to the dataframe
+    publish_date_generator = PublishDateGenerator(
+        num_times_per_day=cfg.num_pins_per_day,
+        total_times=len(df),
+        start_date=cfg.start_date,
+    )
+    publish_date_list = publish_date_generator.generate_times()
+    df['Publish date'] = publish_date_list
 
-        # Prepare a list of remote image paths
-        remote_img_path_list = [
-            get_file_remote_path(img_path, REMOTE_ROOT_DIR) for img_path in img_paths
-        ]
-        df['dst_path'] = remote_img_path_list
-
-        # Prepare a list of titles
-        df_key = pd.read_csv(os.path.join(sample_path, 'keywords.csv'))
-        title_generator = TitleGenerator(df_key)
-        title_list = title_generator.generate_titles(num_titles=len(img_paths))
-        df['Title'] = title_list
-
-        # Prepare a list of image URLs
-        url_list = [get_file_url(remote_img_path, URL) for remote_img_path in remote_img_path_list]
-        df['Media URL'] = url_list
-
-        # Prepare a list of pinterest boards
-        board_list = [category.replace('_', ' ').title() for category in category_list]
-        df['Pinterest board'] = board_list
-
-        # Prepare a list of thumbnails
-        thumbnail_list = [''] * len(img_paths)
-        df['Thumbnail'] = thumbnail_list
-
-        # Prepare a list of descriptions
-        df_desc = pd.read_csv(os.path.join(sample_path, 'descriptions.csv'))
-        desc_generator = DescriptionGenerator(df_desc)
-        desc_list = desc_generator.generate_descriptions(num_descriptions=len(img_paths))
-        df['Description'] = desc_list
-
-        # Prepare a list of links
-        link_list = [URL] * len(img_paths)  # TODO: Replace current URL with ad links
-        df['Link'] = link_list
-
-        # TODO: Prepare a list of publish dates
-        publish_date_generator = PublishDateGenerator(
-            num_times_per_day=cfg.num_pins_per_day,
-            total_times=len(img_paths),
-            start_date=cfg.start_date,
-        )
-        publish_date_list = publish_date_generator.generate_times()
-        df['Publish date'] = publish_date_list
-
-        # Prepare a list of keywords
-        keyword_list = [''] * len(img_paths)
-        df['Keywords'] = keyword_list
-
-    # TODO: Save final CSVs with emojis
+    # Save final CSVs
     os.makedirs(save_dir, exist_ok=True)
+    df = df.astype(str)
     df.to_csv(
         os.path.join(save_dir, 'pins.csv'),
         index=False,

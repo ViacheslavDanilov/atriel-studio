@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from glob import glob
@@ -60,6 +61,23 @@ def get_file_url(
     return file_url
 
 
+def generate_publish_dates(
+    num_pins_per_day: int,
+    total_pins: int = None,
+    start_date: datetime.date = None,
+):
+    if start_date is None:
+        start_date = datetime.date.today()
+    else:
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d').date()
+
+    publish_date_list = []
+    for i in range(total_pins):
+        publish_date = start_date + datetime.timedelta(days=i // num_pins_per_day)
+        publish_date_list.append(publish_date.strftime('%Y-%m-%d'))
+    return publish_date_list
+
+
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
     config_name='generate_pintereset_csv',
@@ -97,25 +115,37 @@ def main(cfg: DictConfig) -> None:
         ]
         df['dst_path'] = remote_img_path_list
 
-        # Prepare a list of image URLs
-        url_list = [get_file_url(remote_img_path, URL) for remote_img_path in remote_img_path_list]
-        df['Media URL'] = url_list
-
-        # Prepare a list of pinterest boards
-        board_list = [category.capitalize() for category in category_list]
-        df['Pinterest board'] = board_list
-
         # Prepare a list of titles
         df_key = pd.read_csv(os.path.join(sample_path, 'keywords.csv'))
         title_generator = TitleGenerator(df_key)
         title_list = title_generator.generate_titles(num_titles=len(img_paths))
         df['Title'] = title_list
 
+        # Prepare a list of image URLs
+        url_list = [get_file_url(remote_img_path, URL) for remote_img_path in remote_img_path_list]
+        df['Media URL'] = url_list
+
+        # Prepare a list of pinterest boards
+        board_list = [category.replace('_', ' ').title() for category in category_list]
+        df['Pinterest board'] = board_list
+
+        # Prepare a list of thumbnails
+        thumbnail_list = [''] * len(img_paths)
+        df['Thumbnail'] = thumbnail_list
+
         # Prepare a list of descriptions
         df_desc = pd.read_csv(os.path.join(sample_path, 'descriptions.csv'))
         desc_generator = DescriptionGenerator(df_desc)
         desc_list = desc_generator.generate_descriptions(num_descriptions=len(img_paths))
         df['Description'] = desc_list
+
+        # Prepare a list of links
+        link_list = [''] * len(img_paths)
+        df['Link'] = link_list
+
+        # TODO: Prepare a list of publish dates
+        publish_date_list = generate_publish_dates(cfg.num_pins_per_day, total_pins=len(img_paths))
+        df['Publish date'] = publish_date_list
 
         # Prepare a list of keywords
         keyword_list = [''] * len(img_paths)

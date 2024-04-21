@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     num_images = 85
     # Test TitleGenerator
-    keyword_path = 'data/step_2/ds_01/highlights/black-celestial/keywords.csv'
+    keyword_path = 'data/step_2/ds-01/highlights/black-celestial/keywords.csv'
     df = pd.read_csv(keyword_path)
     title_generator = TitleGenerator(
         df=df,
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     print('Generated Titles:', title_list)
 
     # Test DescriptionGenerator object
-    description_path = 'data/step_2/ds_01/highlights/black-celestial/descriptions.csv'
+    description_path = 'data/step_2/ds-01/highlights/black-celestial/descriptions.csv'
     df = pd.read_csv(description_path)
     desc_generator = DescriptionGenerator(df=df)
     desc_list = desc_generator.generate_descriptions(num_descriptions=num_images)

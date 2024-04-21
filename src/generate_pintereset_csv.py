@@ -2,10 +2,10 @@ import logging
 import os
 from glob import glob
 from pathlib import Path
-from typing import List
 
 import hydra
 import pandas as pd
+from dotenv import load_dotenv
 from omegaconf import DictConfig, OmegaConf
 
 from src import PROJECT_DIR
@@ -14,6 +14,14 @@ from src.utils import CSV_COLUMNS
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+
+load_dotenv()
+HOSTNAME = os.environ.get('HOSTNAME')
+USERNAME = os.environ.get('USERNAME')
+PASSWORD = os.environ.get('PASSWORD')
+PORT = int(os.environ.get('PORT'))
+REMOTE_ROOT_DIR = os.environ.get('REMOTE_ROOT_DIR')
+URL = os.environ.get('URL')
 
 
 def extract_id(
@@ -32,16 +40,14 @@ def extract_id(
         raise ValueError('Invalid type')
 
 
-def generate_sample_df(
-    img_paths: List[str],
-    df_desc: pd.DataFrame,
-    df_key: pd.DataFrame,
-) -> pd.DataFrame:
-
-    df = pd.DataFrame(columns=CSV_COLUMNS)
-    df['img_path'] = img_paths
-
-    return df
+def get_image_remote_path(
+    img_path: str,
+    remote_root_dir: str,
+) -> str:
+    parts = Path(img_path).parts[-5:]
+    relative_path = '/'.join(parts)
+    img_remote_path = os.path.join(remote_root_dir, relative_path)
+    return img_remote_path
 
 
 @hydra.main(
@@ -59,20 +65,45 @@ def main(cfg: DictConfig) -> None:
 
     sample_paths = glob(os.path.join(data_dir, '*/*'))
     for sample_path in sample_paths:
+
+        # Initialize dataframe
+        df = pd.DataFrame(columns=CSV_COLUMNS)
+
+        # Get list of image paths
         img_paths = glob(os.path.join(sample_path, '*/*.[jpPJ][nNpP][gG]'))
+        img_names = [Path(img_path).name for img_path in img_paths]
+        category_list = [extract_id(img_path, 'category') for img_path in img_paths]
+        sample_names = [extract_id(img_path, 'sample_name') for img_path in img_paths]
+        sample_ids = [extract_id(img_path, 'sample_id') for img_path in img_paths]
+        df['category'] = category_list
+        df['sample_name'] = sample_names
+        df['sample_id'] = sample_ids
+        df['img_name'] = img_names
+        df['src_path'] = img_paths
+
+        # Prepare a list of remote image paths
+        remote_img_path_list = [
+            get_image_remote_path(img_path, REMOTE_ROOT_DIR) for img_path in img_paths
+        ]
+        df['dst_path'] = remote_img_path_list
 
         # Prepare a list of titles
         df_key = pd.read_csv(os.path.join(sample_path, 'keywords.csv'))
         title_generator = TitleGenerator(df_key)
         title_list = title_generator.generate_titles(num_titles=len(img_paths))
+        df['Title'] = title_list
 
         # Prepare a list of descriptions
         df_desc = pd.read_csv(os.path.join(sample_path, 'descriptions.csv'))
         desc_generator = DescriptionGenerator(df_desc)
         desc_list = desc_generator.generate_descriptions(num_descriptions=len(img_paths))
+        df['Description'] = desc_list
 
         # Prepare a list of keywords
         keyword_list = [''] * len(img_paths)
+        df['Keywords'] = keyword_list
+
+        df.to_csv(os.path.join(save_dir, f'{extract_id(sample_path)}.csv'))
 
         print(title_list, desc_list, keyword_list)
 

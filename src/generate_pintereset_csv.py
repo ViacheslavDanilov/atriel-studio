@@ -2,7 +2,7 @@ import logging
 import os
 from glob import glob
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
 import hydra
 import pandas as pd
@@ -40,6 +40,19 @@ def extract_id(
         return parts[-2]
     else:
         raise ValueError('Invalid type')
+
+
+def filter_paths_by_category(
+    paths: List[str],
+    pins_dict: dict,
+) -> List[str]:
+    filtered_paths = []
+    for path in paths:
+        category = os.path.basename(os.path.dirname(path))
+        pins_per_day = pins_dict.get(category, 0)
+        if pins_per_day != 0:
+            filtered_paths.append(path)
+    return filtered_paths
 
 
 def get_file_remote_path(
@@ -139,7 +152,7 @@ def save_csv_files(
         end_idx = min((i + 1) * num_pins_per_csv, len(df))
         df_chunk = df.iloc[start_idx:end_idx]
 
-        # Get the earliest publish date in the chunk and format it as DDMMYY
+        # Get the earliest publishing date in the chunk and format it as DDMMYY
         earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
         formatted_date = earliest_publish_date.strftime('%d%m%y')
 
@@ -151,6 +164,75 @@ def save_csv_files(
             index=False,
             encoding='utf-8',
         )
+
+
+def create_df_per_day(
+    df: pd.DataFrame,
+    num_pins_per_day: Dict[str, int],
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    # Initialize a dictionary to keep track of the number of pins added for each category
+    pins_added_per_category = {category: 0 for category in num_pins_per_day}
+
+    # Shuffle the DataFrame for randomness
+    df = df.sample(frac=1).reset_index(drop=True)
+
+    # Iterate over each row in the shuffled DataFrame
+    df_per_day_list = []
+    for _, row in df.iterrows():
+        category = row['category']
+        num_pins = num_pins_per_day.get(category, 0)
+
+        # Check if the maximum number of pins for the category has been reached
+        if pins_added_per_category[category] < num_pins:
+            # Add the row to the DataFrame for the current day
+            df_per_day_list.append(row)
+            # Increment the count of pins added for the category
+            pins_added_per_category[category] += 1
+            # Remove the selected row from consideration
+            df = df[df.index != row.name]
+
+        # Check if the pins for all categories have been added for the current day
+        if all(
+            count >= num_pins
+            for count, num_pins in zip(pins_added_per_category.values(), num_pins_per_day.values())
+        ):
+            # If yes, break the loop
+            break
+
+    df_day = pd.DataFrame(df_per_day_list)
+
+    return df_day, df
+
+
+def verify_pin_availability(
+    df: pd.DataFrame,
+    num_pins_per_day: Dict[str, int],
+    num_days: int,
+) -> None:
+    # Count the number of pins available for each category in the DataFrame
+    pins_available_per_category = {}
+    for category in num_pins_per_day:
+        pins_available_per_category[category] = df[df['category'] == category].shape[0]
+
+    pins_needed_per_category = {}
+    for category, num_pins in num_pins_per_day.items():
+        pins_needed_per_category[category] = num_pins * num_days
+
+    # Print the number of pins needed and available for each category
+    for category in num_pins_per_day:
+        pins_needed = pins_needed_per_category[category]
+        pins_available = pins_available_per_category.get(category, 0)
+        print(
+            f"Category: {category} - Pins needed: {pins_needed} - Pins available: {pins_available}",
+        )
+
+    # Check if there are any errors
+    for category, pins_needed in pins_needed_per_category.items():
+        pins_available = pins_available_per_category.get(category, 0)
+        if pins_available < pins_needed:
+            raise ValueError(
+                f"Not enough pins available for category '{category}'. Needed: {pins_needed}, Available: {pins_available}",
+            )
 
 
 @hydra.main(
@@ -166,7 +248,9 @@ def main(cfg: DictConfig) -> None:
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
     print(save_dir)
 
-    sample_paths = glob(os.path.join(data_dir, '*/*'))
+    # Get list of sample paths to process
+    sample_paths_ = glob(os.path.join(data_dir, '*/*'))
+    sample_paths = filter_paths_by_category(sample_paths_, cfg.num_pins_per_day)
 
     # Process samples by their paths
     df_list = []
@@ -175,9 +259,24 @@ def main(cfg: DictConfig) -> None:
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 
+    # Check if there is enough sample for each category
+    num_days = (cfg.num_pins_per_csv * cfg.num_csv_files) // sum(cfg.num_pins_per_day.values())
+    verify_pin_availability(df, cfg.num_pins_per_day, num_days=num_days)
+
+    # TODO: create df_list with dataframes with the num_pins_per_day distribution
+    # Create df_day_list with DataFrames representing pins for each day
+    df_day_list = []
+    df_remaining = df.copy()
+
+    for day_id in range(num_days):
+        df_day, df_remaining = create_df_per_day(df_remaining, cfg.num_pins_per_day)
+        df_day['day_id'] = day_id + 1
+        df_day_list.append(df_day)
+    df_output = pd.concat(df_day_list, ignore_index=True)
+
     # Add publish dates to the dataframe
     publish_date_generator = PublishDateGenerator(
-        num_times_per_day=cfg.num_pins_per_day,
+        pins_dict=cfg.num_pins_per_day,
         total_times=len(df),
         start_date=cfg.start_date,
     )

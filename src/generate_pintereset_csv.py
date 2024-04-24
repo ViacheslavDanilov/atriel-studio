@@ -1,6 +1,7 @@
 import logging
 import os
 from glob import glob
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import hydra
@@ -10,8 +11,9 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.text_generators.publish_date_generator import PublishDateGenerator
-from src.text_generators.sample_processor import SampleProcessor
+from src.text_data.publish_date_generator import PublishDateGenerator
+from src.text_data.sample_processor import SampleProcessor
+from src.text_data.ssh_file_transfer import SSHFileTransfer
 from src.utils import CSV_COLUMNS
 
 log = logging.getLogger(__name__)
@@ -42,12 +44,13 @@ def filter_paths_by_category(
 def create_df_per_day(
     df: pd.DataFrame,
     pins_per_day: Dict[str, int],
+    seed: int = 11,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # Initialize a dictionary to keep track of the number of pins added for each category
     pins_added_per_category = {category: 0 for category in pins_per_day}
 
     # Shuffle the DataFrame for randomness
-    df = df.sample(frac=1).reset_index(drop=True)
+    df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     # Iterate over each row in the shuffled DataFrame
     df_per_day_list = []
@@ -179,7 +182,11 @@ def main(cfg: DictConfig) -> None:
     df_day_list = []
     df_remaining = df.copy()
     for _ in range(num_days):
-        df_day, df_remaining = create_df_per_day(df_remaining, cfg.pins_per_day)
+        df_day, df_remaining = create_df_per_day(
+            df=df_remaining,
+            pins_per_day=cfg.pins_per_day,
+            seed=cfg.seed,
+        )
         df_day_list.append(df_day)
     df_output = pd.concat(df_day_list, ignore_index=True)
 
@@ -190,6 +197,24 @@ def main(cfg: DictConfig) -> None:
         num_pins_per_day=sum(cfg.pins_per_day.values()),
     )
     df_output['Publish date'] = publish_date_list
+
+    # TODO: Upload images to the remote server
+    ssh_file_transfer = SSHFileTransfer(
+        username=USERNAME,
+        hostname=HOSTNAME,
+        port=PORT,
+        password=PASSWORD,
+        url=URL,
+    )
+    ssh_file_transfer.connect()
+    for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
+        remote_dir = str(Path(row.dst_path).parent)
+        ssh_file_transfer.create_remote_dir(remote_dir)
+        ssh_file_transfer.upload_file(
+            local_path=row.src_path,
+            remote_path=row.dst_path,
+        )
+    ssh_file_transfer.disconnect()
 
     # Save final CSVs
     df_output = df_output[CSV_COLUMNS]

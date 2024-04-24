@@ -12,3 +12,4 @@ pins_per_day:
 num_csv_files: 2
 max_pins_per_csv: 50
 start_date: # if None, use current date
+seed: 11

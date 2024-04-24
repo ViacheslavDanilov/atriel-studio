@@ -178,9 +178,8 @@ def main(cfg: DictConfig) -> None:
     # Create df_day_list with DataFrames representing pins for each day
     df_day_list = []
     df_remaining = df.copy()
-    for day_id in range(num_days):
+    for _ in range(num_days):
         df_day, df_remaining = create_df_per_day(df_remaining, cfg.pins_per_day)
-        df_day['day_id'] = day_id + 1
         df_day_list.append(df_day)
     df_output = pd.concat(df_day_list, ignore_index=True)
 

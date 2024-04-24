@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # Test DescriptionGenerator class
     num_images = 85
     description_path = (
-        'data/step_2/ds-01/instagram-highlight-covers/black-celestial/descriptions.csv'
+        'data/csv_generation/ds-01/instagram-highlight-covers/black-celestial/descriptions.csv'
     )
     df = pd.read_csv(description_path)
     desc_generator = DescriptionGenerator(df=df)

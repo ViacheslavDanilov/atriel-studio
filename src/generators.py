@@ -102,7 +102,7 @@ class DescriptionGenerator:
 
 
 class PublishDateGenerator:
-    """A class to generate publish dates and times."""
+    """A class to generate publish dates and times based on DataFrame column day_id."""
 
     DEFAULT_TIMES = {
         'Monday': ['20:00:00', '16:00:00', '14:00:00', '21:00:00', '15:00:00'],
@@ -116,40 +116,37 @@ class PublishDateGenerator:
 
     def __init__(
         self,
-        num_times_per_day: int,
-        total_times: int,
         start_date: str = None,
     ):
-        self.num_times_per_day = num_times_per_day
-        self.total_times = total_times
         if start_date is None:
             self.start_date = datetime.datetime.now()
         else:
             self.start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
 
-    def generate_times(self):
+    def generate_times(
+        self,
+        total_pins: int,
+        num_pins_per_day: int,
+    ) -> List[str]:
         utc = pytz.UTC
         publish_time_list = []
         current_date = self.start_date
-        for i in range(self.total_times):
-            publish_date_time = current_date + datetime.timedelta(days=i // self.num_times_per_day)
-            day_of_week = publish_date_time.strftime('%A')
+        for _ in range(total_pins // num_pins_per_day):
+            day_of_week = current_date.strftime('%A')
             times_for_day = self.DEFAULT_TIMES.get(
                 day_of_week,
                 ['09:00:00'],
             )  # Default time is 09:00:00 if not specified
-            time_index = i % len(times_for_day)
-            default_time = times_for_day[time_index]
-            publish_date_time = utc.localize(
-                publish_date_time.replace(
-                    hour=int(default_time[:2]),
-                    minute=int(default_time[3:5]),
-                    second=int(default_time[6:]),
-                ),
-            )
-            publish_time_list.append(publish_date_time.strftime('%Y-%m-%dT%H:%M:%S'))
-            if (i + 1) % self.num_times_per_day == 0:
-                current_date += datetime.timedelta(days=1)
+            for time in times_for_day:
+                publish_date_time = utc.localize(
+                    current_date.replace(
+                        hour=int(time[:2]),
+                        minute=int(time[3:5]),
+                        second=int(time[6:]),
+                    ),
+                )
+                publish_time_list.append(publish_date_time.strftime('%Y-%m-%dT%H:%M:%S'))
+            current_date += datetime.timedelta(days=1)
         return publish_time_list
 
 
@@ -157,7 +154,7 @@ if __name__ == '__main__':
 
     num_images = 85
     # Test TitleGenerator class
-    keyword_path = 'data/step_2/ds-01/highlights/black-celestial/keywords.csv'
+    keyword_path = 'data/step_2/ds-01/instagram-highlight-covers/black-celestial/keywords.csv'
     df = pd.read_csv(keyword_path)
     title_generator = TitleGenerator(
         df=df,
@@ -169,17 +166,23 @@ if __name__ == '__main__':
     print('Generated Titles:', title_list)
 
     # Test DescriptionGenerator class
-    description_path = 'data/step_2/ds-01/highlights/black-celestial/descriptions.csv'
+    description_path = (
+        'data/step_2/ds-01/instagram-highlight-covers/black-celestial/descriptions.csv'
+    )
     df = pd.read_csv(description_path)
     desc_generator = DescriptionGenerator(df=df)
     desc_list = desc_generator.generate_descriptions(num_descriptions=num_images)
     print('Generated Descriptions:', desc_list)
 
     # Test PublishDateGenerator class
-    publish_date_generator = PublishDateGenerator(
-        num_times_per_day=10,
-        total_times=30,
-        start_date='2024-04-21',  # YYYY-MM-DD
+    pins_dict = {
+        'canva-instagram-templates': 5,
+        'instagram-highlight-covers': 3,
+        'instagram-puzzle-feed': 2,
+    }
+    publish_date_generator = PublishDateGenerator(start_date='2024-04-21')
+    time_list = publish_date_generator.generate_times(
+        total_pins=50,
+        num_pins_per_day=sum(pins_dict.values()),
     )
-    time_list = publish_date_generator.generate_times()
     print('Generated Times:', time_list)

@@ -47,7 +47,7 @@ class SampleProcessor:
         img_path: str,
         remote_root_dir: str,
     ) -> str:
-        parts = Path(img_path).parts[-5:]
+        parts = Path(img_path).parts[-4:]
         relative_path = '/'.join(parts)
         img_remote_path = os.path.join(remote_root_dir, relative_path)
         return img_remote_path
@@ -58,7 +58,7 @@ class SampleProcessor:
         url: str,
     ) -> str:
         file_path = Path(remote_path)
-        truncated_path = Path(*file_path.parts[4:])
+        truncated_path = Path(*file_path.parts[5:])
         file_url = os.path.join(url, truncated_path)
         return file_url
 

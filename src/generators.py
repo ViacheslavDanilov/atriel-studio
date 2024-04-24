@@ -137,7 +137,8 @@ class PublishDateGenerator:
                 day_of_week,
                 ['09:00:00'],
             )  # Default time is 09:00:00 if not specified
-            for time in times_for_day:
+            for time_index in range(num_pins_per_day):
+                time = times_for_day[time_index % len(times_for_day)]
                 publish_date_time = utc.localize(
                     current_date.replace(
                         hour=int(time[:2]),

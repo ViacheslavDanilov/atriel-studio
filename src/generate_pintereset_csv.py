@@ -99,7 +99,7 @@ def process_sample(
     df['Media URL'] = url_list
 
     # Pinterest boards
-    board_list = [category.replace('_', ' ').title() for category in category_list]
+    board_list = [category.replace('-', ' ').title() for category in category_list]
     df['Pinterest board'] = board_list
 
     # Thumbnails

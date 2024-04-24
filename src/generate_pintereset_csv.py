@@ -11,7 +11,9 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.generators import DescriptionGenerator, PublishDateGenerator, TitleGenerator
+from src.text_generators.description_generator import DescriptionGenerator
+from src.text_generators.publish_date_generator import PublishDateGenerator
+from src.text_generators.title_generator import TitleGenerator
 from src.utils import CSV_COLUMNS
 
 log = logging.getLogger(__name__)

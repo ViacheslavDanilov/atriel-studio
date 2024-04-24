@@ -1,7 +1,6 @@
 import logging
 import os
 from glob import glob
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 import hydra
@@ -11,10 +10,9 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.text_generators.description_generator import DescriptionGenerator
 from src.text_generators.publish_date_generator import PublishDateGenerator
-from src.text_generators.title_generator import TitleGenerator
-from src.utils import CSV_COLUMNS, extract_id, get_file_remote_path, get_file_url
+from src.text_generators.sample_processor import SampleProcessor
+from src.utils import CSV_COLUMNS
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -39,68 +37,6 @@ def filter_paths_by_category(
         if pins_per_day != 0:
             filtered_paths.append(path)
     return filtered_paths
-
-
-def process_sample(
-    sample_path: str,
-    column_names: List[str] = CSV_COLUMNS,
-) -> pd.DataFrame:
-    # Initialize dataframe
-    df = pd.DataFrame(columns=column_names)
-
-    # Supplementary information
-    img_paths = glob(os.path.join(sample_path, '*/*.[jpPJ][nNpP][gG]'))
-    img_names = [Path(img_path).name for img_path in img_paths]
-    category_list = [extract_id(img_path, 'category') for img_path in img_paths]
-    sample_names = [extract_id(img_path, 'sample_name') for img_path in img_paths]
-    sample_ids = [extract_id(img_path, 'sample_id') for img_path in img_paths]
-    df['category'] = category_list
-    df['sample_name'] = sample_names
-    df['sample_id'] = sample_ids
-    df['sample_id'] = df['sample_id'].astype(str)
-    df['img_name'] = img_names
-    df['src_path'] = img_paths
-
-    # Image paths
-    remote_img_path_list = [
-        get_file_remote_path(img_path, REMOTE_ROOT_DIR) for img_path in img_paths
-    ]
-    df['dst_path'] = remote_img_path_list
-
-    # Titles
-    df_key = pd.read_csv(os.path.join(sample_path, 'keywords.csv'))
-    title_generator = TitleGenerator(df_key)
-    title_list = title_generator.generate_titles(num_titles=len(img_paths))
-    df['Title'] = title_list
-
-    # URLs
-    url_list = [get_file_url(remote_img_path, URL) for remote_img_path in remote_img_path_list]
-    df['Media URL'] = url_list
-
-    # Pinterest boards
-    board_list = [category.replace('-', ' ').title() for category in category_list]
-    df['Pinterest board'] = board_list
-
-    # Thumbnails
-    thumbnail_list = [''] * len(img_paths)
-    df['Thumbnail'] = thumbnail_list
-
-    # Descriptions
-    df_desc = pd.read_csv(os.path.join(sample_path, 'descriptions.csv'))
-    desc_generator = DescriptionGenerator(df_desc)
-    desc_list = desc_generator.generate_descriptions(num_descriptions=len(img_paths))
-    df['Description'] = desc_list
-
-    # Links
-    df_links = pd.read_csv(os.path.join(sample_path, 'links.csv'), dtype={'sample_id': str})
-    sample_id_to_link = df_links.set_index('sample_id')['link'].to_dict()
-    df['Link'] = df['sample_id'].map(sample_id_to_link)
-
-    # Keywords
-    keyword_list = [''] * len(img_paths)
-    df['Keywords'] = keyword_list
-
-    return df
 
 
 def create_df_per_day(
@@ -220,13 +156,18 @@ def main(cfg: DictConfig) -> None:
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
 
     # Get list of sample paths to process
-    sample_paths_ = glob(os.path.join(data_dir, '*/*'))
-    sample_paths = filter_paths_by_category(sample_paths_, cfg.pins_per_day)
+    sample_dirs_ = glob(os.path.join(data_dir, '*/*'))
+    sample_dirs = filter_paths_by_category(sample_dirs_, cfg.pins_per_day)
 
     # Process samples by their paths
     df_list = []
-    for sample_path in tqdm(sample_paths, desc='Processing samples', unit='samples'):
-        df = process_sample(sample_path, column_names=CSV_COLUMNS)
+    sample_processor = SampleProcessor(
+        url=URL,
+        remote_root_dir=REMOTE_ROOT_DIR,
+        column_names=CSV_COLUMNS,
+    )
+    for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
+        df = sample_processor.process_sample(sample_dir)
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 

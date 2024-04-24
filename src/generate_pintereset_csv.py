@@ -131,10 +131,10 @@ def save_csv_files(
 
         # Get the earliest publishing date in the chunk and format it as DDMMYY
         earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
-        formatted_date = earliest_publish_date.strftime('%d%m%y')
+        formatted_date = earliest_publish_date.strftime('%b-%d').lower()
 
         # Save chunk to CSV with filename based on the formatted date
-        csv_filename = f'pins_{formatted_date}.csv'
+        csv_filename = f'pins-{formatted_date}.csv'
         csv_filepath = os.path.join(save_dir, csv_filename)
         df_chunk.to_csv(
             csv_filepath,

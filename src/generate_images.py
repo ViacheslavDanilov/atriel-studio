@@ -6,8 +6,8 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 from src import PROJECT_DIR
-from src.image_generators.image_generator import ImageGenerator
-from src.image_generators.image_matcher import ImageMatcher
+from src.image_data.image_generator import ImageGenerator
+from src.image_data.image_matcher import ImageMatcher
 from src.utils import get_dir_list
 
 log = logging.getLogger(__name__)

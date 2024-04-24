@@ -5,8 +5,8 @@ from typing import List
 
 import pandas as pd
 
-from src.text_generators.description_generator import DescriptionGenerator
-from src.text_generators.title_generator import TitleGenerator
+from src.text_data.description_generator import DescriptionGenerator
+from src.text_data.title_generator import TitleGenerator
 
 
 class SampleProcessor:

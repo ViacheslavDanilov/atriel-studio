@@ -4,6 +4,11 @@ defaults:
 
 data_dir: data/step_2/ds-01/
 save_dir: data/step_2/ds-01-csv/
-num_pins_per_day: 10  # TODO: add pins by categories
+num_pins_per_day:
+  canva-instagram-templates: 5
+  instagram-highlight-covers: 3
+  instagram-puzzle-feed: 2
+  business-cards: 0
+num_csv_files: 1
 num_pins_per_csv: 200
-start_date: 2024-04-21
+start_date: # if None, use current date

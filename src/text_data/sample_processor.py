@@ -58,7 +58,7 @@ class SampleProcessor:
         url: str,
     ) -> str:
         file_path = Path(remote_path)
-        truncated_path = Path(*file_path.parts[5:])
+        truncated_path = Path(*file_path.parts[4:])
         file_url = os.path.join(url, truncated_path)
         return file_url
 

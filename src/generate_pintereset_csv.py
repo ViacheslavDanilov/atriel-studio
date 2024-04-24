@@ -140,16 +140,21 @@ def process_sample(
 def save_csv_files(
     df: pd.DataFrame,
     save_dir: str,
-    num_pins_per_csv: int = 200,
+    num_csv_files: int = 2,
 ) -> None:
-    # Calculate the number of CSV files needed
-    num_csv_files = -(-len(df) // num_pins_per_csv)
+    if len(df) % num_csv_files != 0:
+        raise ValueError(
+            f'Cannot split DataFrame evenly. Number of rows: {len(df)}. Number of CSV files: {num_csv_files}.',
+        )
+
+    # Calculate the number of rows per CSV file
+    rows_per_csv = len(df) // num_csv_files
 
     # Split DataFrame into chunks and save each chunk to a separate CSV file
     os.makedirs(save_dir, exist_ok=True)
-    for i in range(num_csv_files):
-        start_idx = i * num_pins_per_csv
-        end_idx = min((i + 1) * num_pins_per_csv, len(df))
+    for idx in range(num_csv_files):
+        start_idx = idx * rows_per_csv
+        end_idx = (idx + 1) * rows_per_csv
         df_chunk = df.iloc[start_idx:end_idx]
 
         # Get the earliest publishing date in the chunk and format it as DDMMYY
@@ -168,10 +173,10 @@ def save_csv_files(
 
 def create_df_per_day(
     df: pd.DataFrame,
-    num_pins_per_day: Dict[str, int],
+    pins_per_day: Dict[str, int],
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # Initialize a dictionary to keep track of the number of pins added for each category
-    pins_added_per_category = {category: 0 for category in num_pins_per_day}
+    pins_added_per_category = {category: 0 for category in pins_per_day}
 
     # Shuffle the DataFrame for randomness
     df = df.sample(frac=1).reset_index(drop=True)
@@ -180,7 +185,7 @@ def create_df_per_day(
     df_per_day_list = []
     for _, row in df.iterrows():
         category = row['category']
-        num_pins = num_pins_per_day.get(category, 0)
+        num_pins = pins_per_day.get(category, 0)
 
         # Check if the maximum number of pins for the category has been reached
         if pins_added_per_category[category] < num_pins:
@@ -194,7 +199,7 @@ def create_df_per_day(
         # Check if the pins for all categories have been added for the current day
         if all(
             count >= num_pins
-            for count, num_pins in zip(pins_added_per_category.values(), num_pins_per_day.values())
+            for count, num_pins in zip(pins_added_per_category.values(), pins_per_day.values())
         ):
             # If yes, break the loop
             break
@@ -206,20 +211,20 @@ def create_df_per_day(
 
 def verify_pin_availability(
     df: pd.DataFrame,
-    num_pins_per_day: Dict[str, int],
+    pins_per_day: Dict[str, int],
     num_days: int,
 ) -> None:
     # Count the number of pins available for each category in the DataFrame
     pins_available_per_category = {}
-    for category in num_pins_per_day:
+    for category in pins_per_day:
         pins_available_per_category[category] = df[df['category'] == category].shape[0]
 
     pins_needed_per_category = {}
-    for category, num_pins in num_pins_per_day.items():
+    for category, num_pins in pins_per_day.items():
         pins_needed_per_category[category] = num_pins * num_days
 
     # Print the number of pins needed and available for each category
-    for category in num_pins_per_day:
+    for category in pins_per_day:
         pins_needed = pins_needed_per_category[category]
         pins_available = pins_available_per_category.get(category, 0)
         print(
@@ -233,6 +238,7 @@ def verify_pin_availability(
             raise ValueError(
                 f"Not enough pins available for category '{category}'. Needed: {pins_needed}, Available: {pins_available}",
             )
+    print('All pins for each category are available.')
 
 
 @hydra.main(
@@ -246,11 +252,10 @@ def main(cfg: DictConfig) -> None:
     # Define absolute paths
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
-    print(save_dir)
 
     # Get list of sample paths to process
     sample_paths_ = glob(os.path.join(data_dir, '*/*'))
-    sample_paths = filter_paths_by_category(sample_paths_, cfg.num_pins_per_day)
+    sample_paths = filter_paths_by_category(sample_paths_, cfg.pins_per_day)
 
     # Process samples by their paths
     df_list = []
@@ -260,32 +265,33 @@ def main(cfg: DictConfig) -> None:
     df = pd.concat(df_list, ignore_index=True)
 
     # Check if there is enough sample for each category
-    num_days = (cfg.num_pins_per_csv * cfg.num_csv_files) // sum(cfg.num_pins_per_day.values())
-    verify_pin_availability(df, cfg.num_pins_per_day, num_days=num_days)
+    num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())
+    verify_pin_availability(df, cfg.pins_per_day, num_days=num_days)
 
-    # TODO: create df_list with dataframes with the num_pins_per_day distribution
     # Create df_day_list with DataFrames representing pins for each day
     df_day_list = []
     df_remaining = df.copy()
-
     for day_id in range(num_days):
-        df_day, df_remaining = create_df_per_day(df_remaining, cfg.num_pins_per_day)
+        df_day, df_remaining = create_df_per_day(df_remaining, cfg.pins_per_day)
         df_day['day_id'] = day_id + 1
         df_day_list.append(df_day)
     df_output = pd.concat(df_day_list, ignore_index=True)
 
     # Add publish dates to the dataframe
-    publish_date_generator = PublishDateGenerator(
-        pins_dict=cfg.num_pins_per_day,
-        total_times=len(df),
-        start_date=cfg.start_date,
+    publish_date_generator = PublishDateGenerator(start_date=cfg.start_date)
+    publish_date_list = publish_date_generator.generate_times(
+        total_pins=len(df_output),
+        num_pins_per_day=sum(cfg.pins_per_day.values()),
     )
-    publish_date_list = publish_date_generator.generate_times()
-    df['Publish date'] = publish_date_list
+    df_output['Publish date'] = publish_date_list
 
     # Save final CSVs
-    df = df[CSV_COLUMNS]
-    save_csv_files(df=df, save_dir=save_dir, num_pins_per_csv=cfg.num_pins_per_csv)
+    df_output = df_output[CSV_COLUMNS]
+    save_csv_files(
+        df=df_output,
+        save_dir=save_dir,
+        num_csv_files=cfg.num_csv_files,
+    )
 
     log.info('Complete')
 

@@ -98,7 +98,7 @@ def verify_pin_availability(
     for category in pins_per_day:
         pins_needed = pins_needed_per_category[category]
         pins_available = pins_available_per_category.get(category, 0)
-        print(
+        log.info(
             f"Category: {category} - Pins needed: {pins_needed} - Pins available: {pins_available}",
         )
 
@@ -109,7 +109,7 @@ def verify_pin_availability(
             raise ValueError(
                 f"Not enough pins available for category '{category}'. Needed: {pins_needed}, Available: {pins_available}",
             )
-    print('All pins for each category are available.')
+    log.info('All pins for each category are available.')
 
 
 def save_csv_files(
@@ -198,7 +198,7 @@ def main(cfg: DictConfig) -> None:
     )
     df_output['Publish date'] = publish_date_list
 
-    # TODO: Upload images to the remote server
+    # Upload images to the remote server
     ssh_file_transfer = SSHFileTransfer(
         username=USERNAME,
         hostname=HOSTNAME,
@@ -207,6 +207,7 @@ def main(cfg: DictConfig) -> None:
         url=URL,
     )
     ssh_file_transfer.connect()
+    ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
     for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
         remote_dir = str(Path(row.dst_path).parent)
         ssh_file_transfer.create_remote_dir(remote_dir)

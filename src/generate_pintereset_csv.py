@@ -14,7 +14,7 @@ from src import PROJECT_DIR
 from src.text_generators.description_generator import DescriptionGenerator
 from src.text_generators.publish_date_generator import PublishDateGenerator
 from src.text_generators.title_generator import TitleGenerator
-from src.utils import CSV_COLUMNS
+from src.utils import CSV_COLUMNS, extract_id, get_file_remote_path, get_file_url
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -28,22 +28,6 @@ REMOTE_ROOT_DIR = os.environ.get('REMOTE_ROOT_DIR')
 URL = os.environ.get('URL')
 
 
-def extract_id(
-    path: str,
-    type: str = 'category',
-) -> str:
-
-    parts = Path(path).parts
-    if type == 'category':
-        return parts[-4]
-    elif type == 'sample_name':
-        return parts[-3]
-    elif type == 'sample_id':
-        return parts[-2]
-    else:
-        raise ValueError('Invalid type')
-
-
 def filter_paths_by_category(
     paths: List[str],
     pins_dict: dict,
@@ -55,26 +39,6 @@ def filter_paths_by_category(
         if pins_per_day != 0:
             filtered_paths.append(path)
     return filtered_paths
-
-
-def get_file_remote_path(
-    img_path: str,
-    remote_root_dir: str,
-) -> str:
-    parts = Path(img_path).parts[-5:]
-    relative_path = '/'.join(parts)
-    img_remote_path = os.path.join(remote_root_dir, relative_path)
-    return img_remote_path
-
-
-def get_file_url(
-    remote_path: str,
-    url: str,
-) -> str:
-    file_path = Path(remote_path)
-    truncated_path = Path(*file_path.parts[4:])
-    file_url = os.path.join(url, truncated_path)
-    return file_url
 
 
 def process_sample(
@@ -137,40 +101,6 @@ def process_sample(
     df['Keywords'] = keyword_list
 
     return df
-
-
-def save_csv_files(
-    df: pd.DataFrame,
-    save_dir: str,
-    num_csv_files: int = 2,
-) -> None:
-    if len(df) % num_csv_files != 0:
-        raise ValueError(
-            f'Cannot split DataFrame evenly. Number of rows: {len(df)}. Number of CSV files: {num_csv_files}.',
-        )
-
-    # Calculate the number of rows per CSV file
-    rows_per_csv = len(df) // num_csv_files
-
-    # Split DataFrame into chunks and save each chunk to a separate CSV file
-    os.makedirs(save_dir, exist_ok=True)
-    for idx in range(num_csv_files):
-        start_idx = idx * rows_per_csv
-        end_idx = (idx + 1) * rows_per_csv
-        df_chunk = df.iloc[start_idx:end_idx]
-
-        # Get the earliest publishing date in the chunk and format it as DDMMYY
-        earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
-        formatted_date = earliest_publish_date.strftime('%d%m%y')
-
-        # Save chunk to CSV with filename based on the formatted date
-        csv_filename = f'pins_{formatted_date}.csv'
-        csv_filepath = os.path.join(save_dir, csv_filename)
-        df_chunk.to_csv(
-            csv_filepath,
-            index=False,
-            encoding='utf-8',
-        )
 
 
 def create_df_per_day(
@@ -241,6 +171,40 @@ def verify_pin_availability(
                 f"Not enough pins available for category '{category}'. Needed: {pins_needed}, Available: {pins_available}",
             )
     print('All pins for each category are available.')
+
+
+def save_csv_files(
+    df: pd.DataFrame,
+    save_dir: str,
+    num_csv_files: int = 2,
+) -> None:
+    if len(df) % num_csv_files != 0:
+        raise ValueError(
+            f'Cannot split DataFrame evenly. Number of rows: {len(df)}. Number of CSV files: {num_csv_files}.',
+        )
+
+    # Calculate the number of rows per CSV file
+    rows_per_csv = len(df) // num_csv_files
+
+    # Split DataFrame into chunks and save each chunk to a separate CSV file
+    os.makedirs(save_dir, exist_ok=True)
+    for idx in range(num_csv_files):
+        start_idx = idx * rows_per_csv
+        end_idx = (idx + 1) * rows_per_csv
+        df_chunk = df.iloc[start_idx:end_idx]
+
+        # Get the earliest publishing date in the chunk and format it as DDMMYY
+        earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
+        formatted_date = earliest_publish_date.strftime('%d%m%y')
+
+        # Save chunk to CSV with filename based on the formatted date
+        csv_filename = f'pins_{formatted_date}.csv'
+        csv_filepath = os.path.join(save_dir, csv_filename)
+        df_chunk.to_csv(
+            csv_filepath,
+            index=False,
+            encoding='utf-8',
+        )
 
 
 @hydra.main(

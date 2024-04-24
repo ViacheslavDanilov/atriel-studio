@@ -35,7 +35,7 @@ class TitleGenerator:
             attempt_count = 0  # Track the number of attempts to construct a title
             while True:
                 attempt_count += 1
-                if attempt_count > 10:  # Limit the number of attempts
+                if attempt_count > 100:  # Limit the number of attempts
                     raise ValueError(
                         'Failed to construct a title. Add more keywords or change min and max limits',
                     )

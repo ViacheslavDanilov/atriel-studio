@@ -32,6 +32,20 @@ def filter_paths_by_category(
     paths: List[str],
     pins_dict: dict,
 ) -> List[str]:
+    available_categories = set([os.path.basename(os.path.dirname(path)) for path in paths])
+    non_zero_categories = set(
+        [category for category, pins_per_day in pins_dict.items() if pins_per_day != 0],
+    )
+
+    missing_categories = non_zero_categories - available_categories
+    if missing_categories:
+        log.info('Categories with non-zero pins per day not available in the provided directory:')
+        for category in missing_categories:
+            print('-', category)
+        raise ValueError(
+            'Some categories with non-zero pins per day are not available in the provided directory.',
+        )
+
     filtered_paths = []
     for path in paths:
         category = os.path.basename(os.path.dirname(path))
@@ -215,6 +229,8 @@ def main(cfg: DictConfig) -> None:
             local_path=row.src_path,
             remote_path=row.dst_path,
         )
+        if cfg.remove_local_files:
+            os.remove(row.src_path)
     ssh_file_transfer.disconnect()
 
     # Save final CSVs

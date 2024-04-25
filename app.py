@@ -1,8 +1,8 @@
 import os
+from pathlib import Path
 
 import gradio as gr
 
-from src.app.utils import csv_generation_inputs, image_generation_inputs
 from src.image_data.image_generator import ImageGenerator
 from src.image_data.image_matcher import ImageMatcher
 
@@ -12,31 +12,37 @@ def generate_images(
     save_dir: str,
     num_images_per_bg: int,
     scaling_factor: float,
-    seed: int,
+    seed: int = 11,
 ) -> str:
     # Initialize ImageMatcher and ImageGenerator instances
-    matcher = ImageMatcher()
-    generator = ImageGenerator(
-        num_images_per_bg=num_images_per_bg,
-        scaling_factor=scaling_factor,
-        seed=seed,
-    )
+    try:
+        matcher = ImageMatcher()
+        generator = ImageGenerator(
+            num_images_per_bg=num_images_per_bg,
+            scaling_factor=scaling_factor,
+            seed=seed,
+        )
 
-    # Get metadata with layout and background pairs
-    layout_dir = os.path.join(sample_dir, 'layouts')
-    bg_dir = os.path.join(sample_dir, 'backgrounds')
-    layout_paths = matcher.get_file_list(layout_dir, 'layout*.[jpPJ][nNpP][gG]')
-    bg_paths = matcher.get_file_list(bg_dir, 'background*.[jpPJ][nNpP][gG]')
-    df = matcher.create_dataframe(layout_paths, bg_paths)
+        # Get metadata with layout and background pairs
+        layout_dir = os.path.join(sample_dir, 'layouts')
+        bg_dir = os.path.join(sample_dir, 'backgrounds')
+        layout_paths = matcher.get_file_list(layout_dir, 'layout*.[jpPJ][nNpP][gG]')
+        bg_paths = matcher.get_file_list(bg_dir, 'background*.[jpPJ][nNpP][gG]')
+        df = matcher.create_dataframe(layout_paths, bg_paths)
 
-    # Process sample
-    generator.process_sample(
-        df=df,
-        sample_dir=sample_dir,
-        save_dir=save_dir,
-    )
+        # Process sample
+        generator.process_sample(
+            df=df,
+            sample_dir=sample_dir,
+            save_dir=save_dir,
+        )
+        sample_name = Path(sample_dir).name
+        sample_save_dir = os.path.join(save_dir, sample_name)
+        msg = f'Images generated successfully!\n\nDirectory: {sample_save_dir}'
+    except Exception as e:
+        msg = f'Something went wrong!\n\nError: {e}'
 
-    return 'Images generated successfully!'
+    return msg
 
 
 def generate_csv(
@@ -59,34 +65,55 @@ def generate_csv(
     return 'CSV(s) generated successfully!'
 
 
-tab1 = gr.Interface(
-    fn=generate_images,
-    inputs=image_generation_inputs,
-    outputs=gr.Textbox(label='Status'),
-    description='Enter the sample directory, save directory, and parameters to process images.',
-    examples=[
-        ['data/input/highlights/neutral', 'data/output/highlights/', 10, 1.0, 11],
-        ['data/input/stories/marketing_01', 'data/output/stories/', 5, 1.0, 11],
-    ],
-)
+# Create the Gradio app
+with gr.Blocks(theme=gr.themes.Soft()) as app:
+    # Create the tabs
+    with gr.Tab('Image Generation'):
+        with gr.Row():
+            sample_dir = gr.Textbox(
+                label='Sample Directory',
+                value='data/image_generation/input/highlights/neutral',
+                placeholder='Enter path to the sample directory',
+            )
+            save_dir = gr.Textbox(
+                label='Save Directory',
+                value='data/image_generation/output/highlights',
+                placeholder='Enter path to the save directory',
+            )
+        with gr.Row():
+            num_images_per_bg = gr.Slider(
+                minimum=1,
+                maximum=20,
+                value=3,
+                step=1,
+                label='Number of images for each background',
+                info='Choose between 1 and 20',
+            )
+            scaling_factor = gr.Slider(
+                minimum=0.25,
+                maximum=3,
+                value=1,
+                step=0.25,
+                label='Scaling',
+                info='Choose between 0.5 and 5',
+            )
 
-tab2 = gr.Interface(
-    fn=generate_csv,
-    inputs=csv_generation_inputs,
-    outputs=gr.Textbox(label='Status'),
-    title='CSV Generation',
-    description='Enter the configuration for CSV generation.',
-    # examples=[
-    #     'data/csv_generation/', 'data/csv_generation/', 1, 1, 1, 0, 0, 0, 1, 3, True, '', 11
-    # ],
-)
-iface = gr.TabbedInterface(
-    interface_list=[tab1, tab2],
-    tab_names=['Image Generation', 'CSV Generation'],
-    title='Image & CSV Generation App for Pinterest',
-    theme='default',
-    analytics_enabled=True,
-)
+        output = gr.Textbox(label='Output Message')
+        tab1_submit_button = gr.Button('Generate Images')
+        tab1_submit_button.click(
+            fn=generate_images,
+            inputs=[sample_dir, save_dir, num_images_per_bg, scaling_factor],
+            outputs=output,
+        )
+
+    with gr.Tab('CSV Generation'):
+        with gr.Row():
+            input3 = gr.Textbox(label='Input 3')
+            input4 = gr.Textbox(label='Input 4')
+        output3, output4 = gr.Textbox(label='Output 3'), gr.Textbox(label='Output 4')
+        tab2_button = gr.Button('Process Tab 2')
+        tab2_button.click(fn=tab2_func, inputs=[input3, input4], outputs=[output3, output4])
+
 
 if __name__ == '__main__':
-    iface.launch(share=False)
+    app.launch(share=False)

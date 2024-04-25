@@ -2,7 +2,8 @@ import os
 
 import gradio as gr
 
-from src.image_generator import ImageGenerator, ImageMatcher
+from src.image_data.image_generator import ImageGenerator
+from src.image_data.image_matcher import ImageMatcher
 
 
 def process_sample(
@@ -35,7 +36,7 @@ def process_sample(
         save_dir=save_dir,
     )
 
-    return 'Processing completed'
+    return 'Processing Complete'
 
 
 iface = gr.Interface(
@@ -43,12 +44,12 @@ iface = gr.Interface(
     inputs=[
         gr.Textbox(
             label='Sample Directory',
-            value='data/input/highlights/neutral',
+            value='data/image_generation/input/highlights/neutral',
             placeholder='Enter path to the sample directory',
         ),
         gr.Textbox(
             label='Save Directory',
-            value='data/output/highlights',
+            value='data/image_generation/output/highlights',
             placeholder='Enter path to the save directory',
         ),
         gr.Slider(
@@ -77,7 +78,7 @@ iface = gr.Interface(
         ),
     ],
     outputs=gr.Textbox(label='Status'),
-    title='Pinterest Image Generation App',
+    title='Image & CSV Generation App for Pinterest',
     description='Enter the sample directory, save directory, and parameters to process images.',
     examples=[
         ['data/input/highlights/neutral', 'data/output/highlights/', 10, 1.0, 11],

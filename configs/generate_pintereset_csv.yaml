@@ -1,0 +1,18 @@
+defaults:
+- main
+- _self_
+
+data_dir: data/csv_generation/
+save_dir: data/csv_generation/
+pins_per_day:
+  canva-instagram-templates: 1
+  instagram-highlight-covers: 1
+  instagram-puzzle-feed: 1
+  business-cards: 0
+  airbnb-welcome-book: 0
+  price-and-service-guide: 0
+num_csv_files: 1
+max_pins_per_csv: 3
+remove_local_files: true
+start_date: # if None, use current date
+seed: 11

@@ -1,33 +1,31 @@
+import fnmatch
 import os
 from pathlib import Path
-from typing import List, Union
+from typing import List
+
+CSV_COLUMNS = [
+    'Title',
+    'Media URL',
+    'Pinterest board',
+    'Thumbnail',
+    'Description',
+    'Link',
+    'Publish date',
+    'Keywords',
+]
 
 
 def get_file_list(
-    src_dirs: Union[List[str], str],
-    ext_list: Union[List[str], str],
+    directory: str,
+    file_template: str,
 ) -> List[str]:
-    """Get list of files with the specified extensions.
-
-    Args:
-        src_dirs: directory(s) with files inside
-        ext_list: extension(s) used for a search
-    Returns:
-        all_files: a list of file paths
-    """
-    all_files = []
-    src_dirs = [src_dirs] if isinstance(src_dirs, str) else src_dirs
-    ext_list = [ext_list] if isinstance(ext_list, str) else ext_list
-    for src_dir in src_dirs:
-        for root, dirs, files in os.walk(src_dir):
-            for file in files:
-                file_ext = Path(file).suffix
-                file_ext = file_ext.lower()
-                if file_ext in ext_list:
-                    file_path = os.path.join(root, file)
-                    all_files.append(file_path)
-    all_files.sort()
-    return all_files
+    file_list = []
+    for root, dirs, files in os.walk(directory):
+        file_list.extend(
+            [os.path.join(root, file) for file in fnmatch.filter(files, file_template)],
+        )
+    file_list.sort()
+    return file_list
 
 
 def get_dir_list(
@@ -53,3 +51,39 @@ def get_dir_list(
     dir_list.sort()
 
     return dir_list
+
+
+def extract_id(
+    path: str,
+    type: str = 'category',
+) -> str:
+
+    parts = Path(path).parts
+    if type == 'category':
+        return parts[-4]
+    elif type == 'sample_name':
+        return parts[-3]
+    elif type == 'sample_id':
+        return parts[-2]
+    else:
+        raise ValueError('Invalid type')
+
+
+def get_file_remote_path(
+    img_path: str,
+    remote_root_dir: str,
+) -> str:
+    parts = Path(img_path).parts[-5:]
+    relative_path = '/'.join(parts)
+    img_remote_path = os.path.join(remote_root_dir, relative_path)
+    return img_remote_path
+
+
+def get_file_url(
+    remote_path: str,
+    url: str,
+) -> str:
+    file_path = Path(remote_path)
+    truncated_path = Path(*file_path.parts[4:])
+    file_url = os.path.join(url, truncated_path)
+    return file_url

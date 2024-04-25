@@ -1,74 +1,13 @@
-import os
-from pathlib import Path
+from datetime import datetime
 
 import gradio as gr
 
-from src.image_data.image_generator import ImageGenerator
-from src.image_data.image_matcher import ImageMatcher
-
-
-def generate_images(
-    sample_dir: str,
-    save_dir: str,
-    num_images_per_bg: int,
-    scaling_factor: float,
-    seed: int = 11,
-) -> str:
-    # Initialize ImageMatcher and ImageGenerator instances
-    try:
-        matcher = ImageMatcher()
-        generator = ImageGenerator(
-            num_images_per_bg=num_images_per_bg,
-            scaling_factor=scaling_factor,
-            seed=seed,
-        )
-
-        # Get metadata with layout and background pairs
-        layout_dir = os.path.join(sample_dir, 'layouts')
-        bg_dir = os.path.join(sample_dir, 'backgrounds')
-        layout_paths = matcher.get_file_list(layout_dir, 'layout*.[jpPJ][nNpP][gG]')
-        bg_paths = matcher.get_file_list(bg_dir, 'background*.[jpPJ][nNpP][gG]')
-        df = matcher.create_dataframe(layout_paths, bg_paths)
-
-        # Process sample
-        generator.process_sample(
-            df=df,
-            sample_dir=sample_dir,
-            save_dir=save_dir,
-        )
-        sample_name = Path(sample_dir).name
-        sample_save_dir = os.path.join(save_dir, sample_name)
-        msg = f'Images generated successfully!\n\nDirectory: {sample_save_dir}'
-    except Exception as e:
-        msg = f'Something went wrong!\n\nError: {e}'
-
-    return msg
-
-
-def generate_csv(
-    data_dir: str,
-    save_dir: str,
-    pins_per_day_canva_instagram_templates: int,
-    pins_per_day_instagram_highlight_covers: int,
-    pins_per_day_instagram_puzzle_feed: int,
-    pins_per_day_business_cards: int,
-    pins_per_day_airbnb_welcome_book: int,
-    pins_per_day_price_and_service_guide: int,
-    num_csv_files: int,
-    max_pins_per_csv: int,
-    remove_local_files: bool,
-    start_date: str,
-    seed: int,
-) -> str:
-    # Your processing code here
-
-    return 'CSV(s) generated successfully!'
-
+from src.app.functions import generate_csv_files, generate_images
 
 # Create the Gradio app
-with gr.Blocks(theme=gr.themes.Soft()) as app:
-    # Create the tabs
+with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
     with gr.Tab('Image Generation'):
+        # Tab 1 - Row 1
         with gr.Row():
             sample_dir = gr.Textbox(
                 label='Sample Directory',
@@ -80,39 +19,148 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
                 value='data/image_generation/output/highlights',
                 placeholder='Enter path to the save directory',
             )
+        # Tab 1 - Row 2
         with gr.Row():
             num_images_per_bg = gr.Slider(
+                label='Number of images for each background',
                 minimum=1,
                 maximum=20,
-                value=3,
                 step=1,
-                label='Number of images for each background',
+                value=3,
                 info='Choose between 1 and 20',
             )
             scaling_factor = gr.Slider(
+                label='Scaling',
                 minimum=0.25,
                 maximum=3,
-                value=1,
                 step=0.25,
-                label='Scaling',
+                value=1,
                 info='Choose between 0.5 and 5',
             )
 
-        output = gr.Textbox(label='Output Message')
-        tab1_submit_button = gr.Button('Generate Images')
-        tab1_submit_button.click(
+        output = gr.Textbox(label='Status')
+        tab1_button = gr.Button('Generate Images', variant='primary')
+        tab1_button.click(
             fn=generate_images,
             inputs=[sample_dir, save_dir, num_images_per_bg, scaling_factor],
             outputs=output,
         )
 
     with gr.Tab('CSV Generation'):
+        # Tab 2 - Row 1
         with gr.Row():
-            input3 = gr.Textbox(label='Input 3')
-            input4 = gr.Textbox(label='Input 4')
-        output3, output4 = gr.Textbox(label='Output 3'), gr.Textbox(label='Output 4')
-        tab2_button = gr.Button('Process Tab 2')
-        tab2_button.click(fn=tab2_func, inputs=[input3, input4], outputs=[output3, output4])
+            data_dir = gr.Textbox(
+                label='Data Directory',
+                value='data/csv_generation/',
+                placeholder='Enter the directory with category folders inside',
+            )
+            save_dir = gr.Textbox(
+                label='Save Directory',
+                value='data/csv_generation/',
+                placeholder='Enter the directory where the CSV files will be saved',
+            )
+        # Tab 2 - Row 2
+        with gr.Row():
+            num_csv_files = gr.Slider(
+                label='Number of CSV Files',
+                minimum=1,
+                maximum=5,
+                step=1,
+                value=2,
+                info='Choose between 1 and 5',
+            )
+            max_pins_per_csv = gr.Slider(
+                label='Max Pins Per CSV',
+                minimum=1,
+                maximum=200,
+                step=1,
+                value=30,
+                info='Choose between 1 and 200',
+            )
+            today = datetime.today().strftime('%Y-%m-%d')
+            start_date = gr.Textbox(
+                label='Start Date',
+                value=today,  # Format: YYYY-MM-DD
+                placeholder='Enter the start date',
+            )
+            remove_local_files = gr.Checkbox(
+                label='Remove Local Files',
+                value=True,
+                info='If checked, local files will be removed after generation',
+            )
+        # Tab 2 - Row 3
+        with gr.Row():
+            pins_per_day_canva_instagram_templates = gr.Slider(
+                label='Pins per day - Canva Instagram Templates',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=1,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_instagram_highlight_covers = gr.Slider(
+                label='Pins per day - Instagram Highlight Covers',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=1,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_instagram_puzzle_feed = gr.Slider(
+                label='Pins per day - Instagram Puzzle Feed',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=1,
+                info='Choose between 0 and 10',
+            )
+        # Tab 2 - Row 4
+        with gr.Row():
+            pins_per_day_business_cards = gr.Slider(
+                label='Pins per day - Business Cards',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_airbnb_welcome_book = gr.Slider(
+                label='Pins per day - Airbnb Welcome Book',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_price_and_service_guide = gr.Slider(
+                label='Pins per day - Price and Service Guide',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+
+        output = gr.Textbox(label='Status')
+        tab2_button = gr.Button('Generate CSVs', variant='primary')
+        tab2_button.click(
+            fn=generate_csv_files,
+            inputs=[
+                data_dir,
+                save_dir,
+                num_csv_files,
+                max_pins_per_csv,
+                start_date,
+                remove_local_files,
+                pins_per_day_canva_instagram_templates,
+                pins_per_day_instagram_highlight_covers,
+                pins_per_day_instagram_puzzle_feed,
+                pins_per_day_business_cards,
+                pins_per_day_airbnb_welcome_book,
+                pins_per_day_price_and_service_guide,
+            ],
+            outputs=output,
+        )
 
 
 if __name__ == '__main__':

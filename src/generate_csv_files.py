@@ -162,7 +162,7 @@ def save_csv_files(
 
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='generate_pintereset_csv',
+    config_name='generate_csv_files',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:

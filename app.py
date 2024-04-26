@@ -66,7 +66,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 minimum=1,
                 maximum=5,
                 step=1,
-                value=2,
+                value=1,
                 info='Choose between 1 and 5',
             )
             max_pins_per_csv = gr.Slider(
@@ -74,7 +74,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 minimum=1,
                 maximum=200,
                 step=1,
-                value=30,
+                value=3,
                 info='Choose between 1 and 200',
             )
             today = datetime.today().strftime('%Y-%m-%d')
@@ -82,10 +82,11 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 label='Start Date',
                 value=today,  # Format: YYYY-MM-DD
                 placeholder='Enter the start date',
+                info='Enter the start date in the format YYYY-MM-DD',
             )
             remove_local_files = gr.Checkbox(
                 label='Remove Local Files',
-                value=True,
+                value=False,
                 info='If checked, local files will be removed after generation',
             )
         # Tab 2 - Row 3

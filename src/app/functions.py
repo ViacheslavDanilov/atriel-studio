@@ -2,6 +2,7 @@ import os
 from glob import glob
 from pathlib import Path
 
+import gradio as gr
 import pandas as pd
 from tqdm import tqdm
 
@@ -137,7 +138,12 @@ def generate_csv_files(
         )
         ssh_file_transfer.connect()
         ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-        for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
+        total_pins = len(df_output)
+        progress = gr.Progress(track_tqdm=True)
+        progress(0, desc='Starting')
+        for idx, row in enumerate(
+            tqdm(df_output.itertuples(), desc='Uploading images', unit='images', total=total_pins),
+        ):
             remote_dir = str(Path(row.dst_path).parent)
             ssh_file_transfer.create_remote_dir(remote_dir)
             ssh_file_transfer.upload_file(
@@ -146,6 +152,8 @@ def generate_csv_files(
             )
             if remove_local_files:
                 os.remove(row.src_path)
+            # Update progress
+            progress((idx + 1) / total_pins)
         ssh_file_transfer.disconnect()
 
         # Save final CSVs

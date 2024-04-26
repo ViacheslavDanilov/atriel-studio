@@ -19,22 +19,25 @@ from src.utils import CSV_COLUMNS
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
-load_dotenv()
-HOSTNAME = os.environ.get('HOSTNAME')
-USERNAME = os.environ.get('USERNAME')
-PASSWORD = os.environ.get('PASSWORD')
-PORT = int(os.environ.get('PORT'))
-REMOTE_ROOT_DIR = os.environ.get('REMOTE_ROOT_DIR')
-URL = os.environ.get('URL')
+
+def load_credentials(dotenv_path: str = '.env') -> Tuple[str, str, str, int, str, str]:
+    load_dotenv(dotenv_path)
+    HOSTNAME = os.environ.get('HOSTNAME')
+    USERNAME = os.environ.get('USERNAME')
+    PASSWORD = os.environ.get('PASSWORD')
+    PORT = int(os.environ.get('PORT'))
+    REMOTE_ROOT_DIR = os.environ.get('REMOTE_ROOT_DIR')
+    URL = os.environ.get('URL')
+    return HOSTNAME, USERNAME, PASSWORD, PORT, REMOTE_ROOT_DIR, URL
 
 
 def filter_paths_by_category(
     paths: List[str],
-    pins_dict: dict,
+    pins_per_day: Dict[str, int],
 ) -> List[str]:
     available_categories = set([os.path.basename(os.path.dirname(path)) for path in paths])
     non_zero_categories = set(
-        [category for category, pins_per_day in pins_dict.items() if pins_per_day != 0],
+        [category for category, pins_per_day in pins_per_day.items() if pins_per_day != 0],
     )
 
     missing_categories = non_zero_categories - available_categories
@@ -49,8 +52,8 @@ def filter_paths_by_category(
     filtered_paths = []
     for path in paths:
         category = os.path.basename(os.path.dirname(path))
-        pins_per_day = pins_dict.get(category, 0)
-        if pins_per_day != 0:
+        pins_per_day_for_category = pins_per_day.get(category, 0)  # type: ignore
+        if pins_per_day_for_category != 0:
             filtered_paths.append(path)
     return filtered_paths
 
@@ -162,7 +165,7 @@ def save_csv_files(
 
 @hydra.main(
     config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='generate_pintereset_csv',
+    config_name='generate_csv_files',
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
@@ -171,6 +174,9 @@ def main(cfg: DictConfig) -> None:
     # Define absolute paths
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
+
+    # Load credentials
+    HOSTNAME, USERNAME, PASSWORD, PORT, REMOTE_ROOT_DIR, URL = load_credentials()
 
     # Get list of sample paths to process
     sample_dirs_ = glob(os.path.join(data_dir, '*/*'))

@@ -19,13 +19,16 @@ from src.utils import CSV_COLUMNS
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
-load_dotenv()
-HOSTNAME = os.environ.get('HOSTNAME')
-USERNAME = os.environ.get('USERNAME')
-PASSWORD = os.environ.get('PASSWORD')
-PORT = int(os.environ.get('PORT'))
-REMOTE_ROOT_DIR = os.environ.get('REMOTE_ROOT_DIR')
-URL = os.environ.get('URL')
+
+def load_credentials(dotenv_path: str = '.env') -> Tuple[str, str, str, int, str, str]:
+    load_dotenv(dotenv_path)
+    HOSTNAME = os.environ.get('HOSTNAME')
+    USERNAME = os.environ.get('USERNAME')
+    PASSWORD = os.environ.get('PASSWORD')
+    PORT = int(os.environ.get('PORT'))
+    REMOTE_ROOT_DIR = os.environ.get('REMOTE_ROOT_DIR')
+    URL = os.environ.get('URL')
+    return HOSTNAME, USERNAME, PASSWORD, PORT, REMOTE_ROOT_DIR, URL
 
 
 def filter_paths_by_category(
@@ -49,8 +52,8 @@ def filter_paths_by_category(
     filtered_paths = []
     for path in paths:
         category = os.path.basename(os.path.dirname(path))
-        pins_per_day = pins_per_day.get(category, 0)  # type: ignore
-        if pins_per_day != 0:
+        pins_per_day_for_category = pins_per_day.get(category, 0)  # type: ignore
+        if pins_per_day_for_category != 0:
             filtered_paths.append(path)
     return filtered_paths
 
@@ -171,6 +174,9 @@ def main(cfg: DictConfig) -> None:
     # Define absolute paths
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
     save_dir = str(os.path.join(PROJECT_DIR, cfg.save_dir))
+
+    # Load credentials
+    HOSTNAME, USERNAME, PASSWORD, PORT, REMOTE_ROOT_DIR, URL = load_credentials()
 
     # Get list of sample paths to process
     sample_dirs_ = glob(os.path.join(data_dir, '*/*'))

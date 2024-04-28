@@ -101,12 +101,6 @@ def generate_csv_files(
         )
         for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
             df = sample_processor.process_sample(sample_dir)
-            title_list = df['Title'].tolist()
-            duplicate_msg = []
-            if len(title_list) != len(set(title_list)):
-                sample_rel_dir = '/'.join(Path(sample_dir).parts[-2:])
-                log_msg = f'Sample: {sample_rel_dir} - Duplicate titles: {len(title_list) - len(set(title_list))}'
-                duplicate_msg.append(log_msg)
             df_list.append(df)
         df = pd.concat(df_list, ignore_index=True)
 
@@ -162,14 +156,17 @@ def generate_csv_files(
             progress((idx + 1) / total_pins)
         ssh_file_transfer.disconnect()
 
+        # Find duplicate titles
+        df_duplicates = df_output[df_output.duplicated(subset=['Column'], keep=False)]
+        print(f'Duplicates: {df_duplicates}')
+
         # Save final CSVs
-        df_output = df_output[CSV_COLUMNS]
         save_csv_files(
             df=df_output,
             save_dir=save_dir,
             num_csv_files=num_csv_files,
         )
-        msg = f'CSV(s) generated successfully!\n\nDirectory: {save_dir}\n\n{duplicate_msg}'
+        msg = f'CSV(s) generated successfully!\n\nDirectory: {save_dir}'
     except Exception as e:
         msg = f'Something went wrong!\n\nError: {e}'
 

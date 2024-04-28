@@ -87,7 +87,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
             copy_files_to_server = gr.Checkbox(
                 label='Copy Files to Server',
                 value=False,
-                info='If checked, local files will be copied to the server',
+                info='If checked, local files will be copied to the remote server',
             )
             remove_local_files = gr.Checkbox(
                 label='Remove Local Files',

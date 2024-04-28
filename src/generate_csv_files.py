@@ -188,20 +188,19 @@ def main(cfg: DictConfig) -> None:
         remote_root_dir=REMOTE_ROOT_DIR,
         column_names=CSV_COLUMNS,
     )
-    attempt_count = 0
-    while True:
-        df_list = []
-        for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
-            df = sample_processor.process_sample(sample_dir)
-            df_list.append(df)
-        df = pd.concat(df_list, ignore_index=True)
-        if len(df['Title']) == len(set(df['Title'])):
-            break
-        if attempt_count > 100:
-            raise ValueError(
-                'Could not create a dataframe without duplicates. Increase the number of attempts.',
-            )
-        attempt_count += 1
+    df_list = []
+    for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
+        df_ = sample_processor.process_sample(sample_dir)
+        df_list.append(df_)
+    df_all = pd.concat(df_list, ignore_index=True)
+    df_duplicates = df_all[df_all.duplicated(subset=['Title'], keep=False)]
+    df = df_all.drop_duplicates(subset=['Title'], keep='first')
+    total_pins = len(df_all)
+    duplicate_pins = len(df_duplicates['Title'].unique())
+    unique_pins = len(df['Title'].unique())
+    log.info(f'Total pins: {total_pins}')
+    log.info(f'Duplicate pins: {duplicate_pins}')
+    log.info(f'Unique pins: {unique_pins}')
 
     # Check if there is enough sample for each category
     num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())

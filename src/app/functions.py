@@ -99,20 +99,16 @@ def generate_csv_files(
             remote_root_dir=REMOTE_ROOT_DIR,
             column_names=CSV_COLUMNS,
         )
-        attempt_count = 0
-        while True:
-            df_list = []
-            for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
-                df = sample_processor.process_sample(sample_dir)
-                df_list.append(df)
-            df = pd.concat(df_list, ignore_index=True)
-            if len(df['Title']) == len(set(df['Title'])):
-                break
-            if attempt_count > 100:
-                raise ValueError(
-                    'Could not create a dataframe without duplicates. Increase the number of attempts.',
-                )
-            attempt_count += 1
+        df_list = []
+        for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
+            df_ = sample_processor.process_sample(sample_dir)
+            df_list.append(df_)
+        df_all = pd.concat(df_list, ignore_index=True)
+        df_duplicates = df_all[df_all.duplicated(subset=['Title'], keep=False)]
+        df = df_all.drop_duplicates(subset=['Title'], keep='first')
+        total_pins = len(df_all)
+        duplicate_pins = len(df_duplicates['Title'].unique())
+        unique_pins = len(df['Title'].unique())
 
         # Check if there is enough sample for each category
         num_days = (max_pins_per_csv * num_csv_files) // sum(pins_per_day.values())
@@ -179,7 +175,10 @@ def generate_csv_files(
             num_csv_files=num_csv_files,
         )
 
-        msg = f'CSV(s) generated successfully!\n\nSaved directory: {save_dir}\n\nTotal pins: {len(df_output)}'
+        saved_pins = len(df_output)
+        pin_msg = f'Total pins available: {total_pins}\n\nUnique pins: {unique_pins}\n\nDuplicate pins: {duplicate_pins}\n\nSaved pins: {saved_pins}'
+        msg = f'CSV(s) generated successfully!\n\nSaved directory: {save_dir}\n\n'
+        msg += pin_msg
     except Exception as e:
         msg = f'Something went wrong!\n\nError: {e}'
 

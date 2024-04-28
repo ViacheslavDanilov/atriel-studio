@@ -94,16 +94,25 @@ def generate_csv_files(
         sample_dirs = filter_paths_by_category(sample_dirs_, pins_per_day)
 
         # Process samples by their paths
-        df_list = []
         sample_processor = SampleProcessor(
             url=URL,
             remote_root_dir=REMOTE_ROOT_DIR,
             column_names=CSV_COLUMNS,
         )
-        for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
-            df = sample_processor.process_sample(sample_dir)
-            df_list.append(df)
-        df = pd.concat(df_list, ignore_index=True)
+        attempt_count = 0
+        while True:
+            df_list = []
+            for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
+                df = sample_processor.process_sample(sample_dir)
+                df_list.append(df)
+            df = pd.concat(df_list, ignore_index=True)
+            if df['Title'].nunique() == len(df):
+                break
+            if attempt_count > 100:
+                raise ValueError(
+                    'Could not create a dataframe without duplicates. Increase the number of attempts.',
+                )
+            attempt_count += 1
 
         # Check if there is enough sample for each category
         num_days = (max_pins_per_csv * num_csv_files) // sum(pins_per_day.values())
@@ -170,12 +179,7 @@ def generate_csv_files(
             num_csv_files=num_csv_files,
         )
 
-        # Find and save duplicates
-        df_duplicates = df_output[df_output.duplicated(subset=['Title'], keep=False)]
-        if len(df_duplicates) > 0:
-            df_duplicates.to_csv(os.path.join(save_dir, 'pins-duplicates.csv'), index=True)
-
-        msg = f'CSV(s) generated successfully!\n\nDirectory: {save_dir}\n\nDuplicates: {len(df_duplicates)}'
+        msg = f'CSV(s) generated successfully!\n\nSaved directory: {save_dir}\n\nTotal pins: {len(df_output)}'
     except Exception as e:
         msg = f'Something went wrong!\n\nError: {e}'
 

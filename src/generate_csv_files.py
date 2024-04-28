@@ -195,7 +195,7 @@ def main(cfg: DictConfig) -> None:
             df = sample_processor.process_sample(sample_dir)
             df_list.append(df)
         df = pd.concat(df_list, ignore_index=True)
-        if df['Title'].nunique() == len(df):
+        if len(df['Title']) == len(set(df['Title'])):
             break
         if attempt_count > 100:
             raise ValueError(

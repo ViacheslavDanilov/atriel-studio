@@ -65,6 +65,7 @@ def generate_csv_files(
     num_csv_files: int,
     max_pins_per_csv: int,
     start_date: str,
+    copy_files_to_server: bool,
     remove_local_files: bool,
     pins_per_day_canva_instagram_templates: int,
     pins_per_day_instagram_highlight_covers: int,
@@ -93,16 +94,21 @@ def generate_csv_files(
         sample_dirs = filter_paths_by_category(sample_dirs_, pins_per_day)
 
         # Process samples by their paths
-        df_list = []
         sample_processor = SampleProcessor(
             url=URL,
             remote_root_dir=REMOTE_ROOT_DIR,
             column_names=CSV_COLUMNS,
         )
+        df_list = []
         for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
-            df = sample_processor.process_sample(sample_dir)
-            df_list.append(df)
-        df = pd.concat(df_list, ignore_index=True)
+            df_ = sample_processor.process_sample(sample_dir)
+            df_list.append(df_)
+        df_all = pd.concat(df_list, ignore_index=True)
+        df_duplicates = df_all[df_all.duplicated(subset=['Title'], keep=False)]
+        df = df_all.drop_duplicates(subset=['Title'], keep='first')
+        total_pins = len(df_all)
+        duplicate_pins = len(df_duplicates['Title'].unique())
+        unique_pins = len(df['Title'].unique())
 
         # Check if there is enough sample for each category
         num_days = (max_pins_per_csv * num_csv_files) // sum(pins_per_day.values())
@@ -129,41 +135,50 @@ def generate_csv_files(
         df_output['Publish date'] = publish_date_list
 
         # Upload images to the remote server
-        ssh_file_transfer = SSHFileTransfer(
-            username=USERNAME,
-            hostname=HOSTNAME,
-            port=PORT,
-            password=PASSWORD,
-            url=URL,
-        )
-        ssh_file_transfer.connect()
-        ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-        total_pins = len(df_output)
-        progress = gr.Progress(track_tqdm=True)
-        progress(0, desc='Starting')
-        for idx, row in enumerate(
-            tqdm(df_output.itertuples(), desc='Uploading images', unit='images', total=total_pins),
-        ):
-            remote_dir = str(Path(row.dst_path).parent)
-            ssh_file_transfer.create_remote_dir(remote_dir)
-            ssh_file_transfer.upload_file(
-                local_path=row.src_path,
-                remote_path=row.dst_path,
+        if copy_files_to_server:
+            ssh_file_transfer = SSHFileTransfer(
+                username=USERNAME,
+                hostname=HOSTNAME,
+                port=PORT,
+                password=PASSWORD,
+                url=URL,
             )
-            if remove_local_files:
-                os.remove(row.src_path)
-            # Update progress
-            progress((idx + 1) / total_pins)
-        ssh_file_transfer.disconnect()
+            ssh_file_transfer.connect()
+            ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
+            total_pins = len(df_output)
+            progress = gr.Progress(track_tqdm=True)
+            progress(0, desc='Starting')
+            for idx, row in enumerate(
+                tqdm(
+                    df_output.itertuples(),
+                    desc='Uploading images',
+                    unit='images',
+                    total=total_pins,
+                ),
+            ):
+                remote_dir = str(Path(row.dst_path).parent)
+                ssh_file_transfer.create_remote_dir(remote_dir)
+                ssh_file_transfer.upload_file(
+                    local_path=row.src_path,
+                    remote_path=row.dst_path,
+                )
+                if remove_local_files:
+                    os.remove(row.src_path)
+                # Update progress
+                progress((idx + 1) / total_pins)
+            ssh_file_transfer.disconnect()
 
         # Save final CSVs
-        df_output = df_output[CSV_COLUMNS]
         save_csv_files(
             df=df_output,
             save_dir=save_dir,
             num_csv_files=num_csv_files,
         )
-        msg = f'CSV(s) generated successfully!\n\nDirectory: {save_dir}'
+
+        saved_pins = len(df_output)
+        pin_msg = f'Total pins available: {total_pins}\n\nUnique pins: {unique_pins}\n\nDuplicate pins: {duplicate_pins}\n\nSaved pins: {saved_pins}'
+        msg = f'CSV(s) generated successfully!\n\nSaved directory: {save_dir}\n\n'
+        msg += pin_msg
     except Exception as e:
         msg = f'Something went wrong!\n\nError: {e}'
 

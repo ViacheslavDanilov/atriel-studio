@@ -38,12 +38,12 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 info='Choose between 0.5 and 5',
             )
 
-        output = gr.Textbox(label='Status')
-        tab1_button = gr.Button('Generate Images', variant='primary')
-        tab1_button.click(
+        status_msg = gr.Textbox(label='Status')
+        start_button_1 = gr.Button('Generate Images', variant='primary')
+        start_button_1.click(
             fn=generate_images,
             inputs=[sample_dir, save_dir, num_images_per_bg, scaling_factor],
-            outputs=output,
+            outputs=status_msg,
         )
 
     with gr.Tab('CSV Generation'):
@@ -83,6 +83,11 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 value=today,  # Format: YYYY-MM-DD
                 placeholder='Enter the start date',
                 info='Enter the start date in the format YYYY-MM-DD',
+            )
+            copy_files_to_server = gr.Checkbox(
+                label='Copy Files to Server',
+                value=False,
+                info='If checked, local files will be copied to the remote server',
             )
             remove_local_files = gr.Checkbox(
                 label='Remove Local Files',
@@ -142,9 +147,9 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 info='Choose between 0 and 10',
             )
 
-        output = gr.Textbox(label='Status')
-        tab2_button = gr.Button('Generate CSVs', variant='primary')
-        tab2_button.click(
+        status_msg = gr.Textbox(label='Status')
+        start_button_2 = gr.Button('Generate CSVs', variant='primary')
+        start_button_2.click(
             fn=generate_csv_files,
             inputs=[
                 data_dir,
@@ -152,6 +157,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 num_csv_files,
                 max_pins_per_csv,
                 start_date,
+                copy_files_to_server,
                 remove_local_files,
                 pins_per_day_canva_instagram_templates,
                 pins_per_day_instagram_highlight_covers,
@@ -160,7 +166,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 pins_per_day_airbnb_welcome_book,
                 pins_per_day_price_and_service_guide,
             ],
-            outputs=output,
+            outputs=status_msg,
         )
 
 

@@ -5,14 +5,15 @@ defaults:
 data_dir: data/csv_generation/
 save_dir: data/csv_generation/
 pins_per_day:
-  canva-instagram-templates: 1
-  instagram-highlight-covers: 1
+  canva-instagram-templates: 7
+  instagram-highlight-covers: 2
   instagram-puzzle-feed: 1
   business-cards: 0
   airbnb-welcome-book: 0
   price-and-service-guide: 0
 num_csv_files: 1
-max_pins_per_csv: 3
+max_pins_per_csv: 180
+copy_files_to_server: false
 remove_local_files: false
 start_date: # Format: YYYY-MM-DD for example: 2024-04-25. If None, use current date
 seed: 11

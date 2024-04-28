@@ -149,7 +149,7 @@ def save_csv_files(
         end_idx = (idx + 1) * rows_per_csv
         df_chunk = df.iloc[start_idx:end_idx]
 
-        # Get the earliest publishing date in the chunk and format it as DDMMYY
+        # Get the earliest publishing date in the chunk and format it as month-day
         earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
         formatted_date = earliest_publish_date.strftime('%b-%d').lower()
 
@@ -183,16 +183,24 @@ def main(cfg: DictConfig) -> None:
     sample_dirs = filter_paths_by_category(sample_dirs_, cfg.pins_per_day)
 
     # Process samples by their paths
-    df_list = []
     sample_processor = SampleProcessor(
         url=URL,
         remote_root_dir=REMOTE_ROOT_DIR,
         column_names=CSV_COLUMNS,
     )
+    df_list = []
     for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
-        df = sample_processor.process_sample(sample_dir)
-        df_list.append(df)
-    df = pd.concat(df_list, ignore_index=True)
+        df_ = sample_processor.process_sample(sample_dir)
+        df_list.append(df_)
+    df_all = pd.concat(df_list, ignore_index=True)
+    df_duplicates = df_all[df_all.duplicated(subset=['Title'], keep=False)]
+    df = df_all.drop_duplicates(subset=['Title'], keep='first')
+    total_pins = len(df_all)
+    duplicate_pins = len(df_duplicates['Title'].unique())
+    unique_pins = len(df['Title'].unique())
+    log.info(f'Total pins: {total_pins}')
+    log.info(f'Duplicate pins: {duplicate_pins}')
+    log.info(f'Unique pins: {unique_pins}')
 
     # Check if there is enough sample for each category
     num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())
@@ -219,25 +227,26 @@ def main(cfg: DictConfig) -> None:
     df_output['Publish date'] = publish_date_list
 
     # Upload images to the remote server
-    ssh_file_transfer = SSHFileTransfer(
-        username=USERNAME,
-        hostname=HOSTNAME,
-        port=PORT,
-        password=PASSWORD,
-        url=URL,
-    )
-    ssh_file_transfer.connect()
-    ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-    for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
-        remote_dir = str(Path(row.dst_path).parent)
-        ssh_file_transfer.create_remote_dir(remote_dir)
-        ssh_file_transfer.upload_file(
-            local_path=row.src_path,
-            remote_path=row.dst_path,
+    if cfg.copy_files_to_server:
+        ssh_file_transfer = SSHFileTransfer(
+            username=USERNAME,
+            hostname=HOSTNAME,
+            port=PORT,
+            password=PASSWORD,
+            url=URL,
         )
-        if cfg.remove_local_files:
-            os.remove(row.src_path)
-    ssh_file_transfer.disconnect()
+        ssh_file_transfer.connect()
+        ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
+        for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
+            remote_dir = str(Path(row.dst_path).parent)
+            ssh_file_transfer.create_remote_dir(remote_dir)
+            ssh_file_transfer.upload_file(
+                local_path=row.src_path,
+                remote_path=row.dst_path,
+            )
+            if cfg.remove_local_files:
+                os.remove(row.src_path)
+        ssh_file_transfer.disconnect()
 
     # Save final CSVs
     df_output = df_output[CSV_COLUMNS]

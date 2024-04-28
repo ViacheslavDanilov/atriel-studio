@@ -65,6 +65,7 @@ def generate_csv_files(
     num_csv_files: int,
     max_pins_per_csv: int,
     start_date: str,
+    copy_files_to_server: bool,
     remove_local_files: bool,
     pins_per_day_canva_instagram_templates: int,
     pins_per_day_instagram_highlight_covers: int,
@@ -129,32 +130,38 @@ def generate_csv_files(
         df_output['Publish date'] = publish_date_list
 
         # Upload images to the remote server
-        ssh_file_transfer = SSHFileTransfer(
-            username=USERNAME,
-            hostname=HOSTNAME,
-            port=PORT,
-            password=PASSWORD,
-            url=URL,
-        )
-        ssh_file_transfer.connect()
-        ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-        total_pins = len(df_output)
-        progress = gr.Progress(track_tqdm=True)
-        progress(0, desc='Starting')
-        for idx, row in enumerate(
-            tqdm(df_output.itertuples(), desc='Uploading images', unit='images', total=total_pins),
-        ):
-            remote_dir = str(Path(row.dst_path).parent)
-            ssh_file_transfer.create_remote_dir(remote_dir)
-            ssh_file_transfer.upload_file(
-                local_path=row.src_path,
-                remote_path=row.dst_path,
+        if copy_files_to_server:
+            ssh_file_transfer = SSHFileTransfer(
+                username=USERNAME,
+                hostname=HOSTNAME,
+                port=PORT,
+                password=PASSWORD,
+                url=URL,
             )
-            if remove_local_files:
-                os.remove(row.src_path)
-            # Update progress
-            progress((idx + 1) / total_pins)
-        ssh_file_transfer.disconnect()
+            ssh_file_transfer.connect()
+            ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
+            total_pins = len(df_output)
+            progress = gr.Progress(track_tqdm=True)
+            progress(0, desc='Starting')
+            for idx, row in enumerate(
+                tqdm(
+                    df_output.itertuples(),
+                    desc='Uploading images',
+                    unit='images',
+                    total=total_pins,
+                ),
+            ):
+                remote_dir = str(Path(row.dst_path).parent)
+                ssh_file_transfer.create_remote_dir(remote_dir)
+                ssh_file_transfer.upload_file(
+                    local_path=row.src_path,
+                    remote_path=row.dst_path,
+                )
+                if remove_local_files:
+                    os.remove(row.src_path)
+                # Update progress
+                progress((idx + 1) / total_pins)
+            ssh_file_transfer.disconnect()
 
         # Find duplicate titles
         df_duplicates = df_output[df_output.duplicated(subset=['Column'], keep=False)]

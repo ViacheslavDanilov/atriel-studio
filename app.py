@@ -84,6 +84,11 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 placeholder='Enter the start date',
                 info='Enter the start date in the format YYYY-MM-DD',
             )
+            copy_files_to_server = gr.Checkbox(
+                label='Copy Files to Server',
+                value=False,
+                info='If checked, local files will be copied to the server',
+            )
             remove_local_files = gr.Checkbox(
                 label='Remove Local Files',
                 value=False,
@@ -152,6 +157,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 num_csv_files,
                 max_pins_per_csv,
                 start_date,
+                copy_files_to_server,
                 remove_local_files,
                 pins_per_day_canva_instagram_templates,
                 pins_per_day_instagram_highlight_covers,

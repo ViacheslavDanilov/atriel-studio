@@ -191,13 +191,6 @@ def main(cfg: DictConfig) -> None:
     )
     for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
         df = sample_processor.process_sample(sample_dir)
-        # Check for duplicate titles
-        title_list = df['Title'].tolist()
-        if len(title_list) != len(set(title_list)):
-            sample_rel_dir = '/'.join(Path(sample_dir).parts[-2:])
-            log.info(
-                f'Sample: {sample_rel_dir} - Duplicate titles: {len(title_list) - len(set(title_list))}',
-            )
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 
@@ -226,25 +219,26 @@ def main(cfg: DictConfig) -> None:
     df_output['Publish date'] = publish_date_list
 
     # Upload images to the remote server
-    ssh_file_transfer = SSHFileTransfer(
-        username=USERNAME,
-        hostname=HOSTNAME,
-        port=PORT,
-        password=PASSWORD,
-        url=URL,
-    )
-    ssh_file_transfer.connect()
-    ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-    for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
-        remote_dir = str(Path(row.dst_path).parent)
-        ssh_file_transfer.create_remote_dir(remote_dir)
-        ssh_file_transfer.upload_file(
-            local_path=row.src_path,
-            remote_path=row.dst_path,
+    if cfg.copy_files_to_server:
+        ssh_file_transfer = SSHFileTransfer(
+            username=USERNAME,
+            hostname=HOSTNAME,
+            port=PORT,
+            password=PASSWORD,
+            url=URL,
         )
-        if cfg.remove_local_files:
-            os.remove(row.src_path)
-    ssh_file_transfer.disconnect()
+        ssh_file_transfer.connect()
+        ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
+        for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
+            remote_dir = str(Path(row.dst_path).parent)
+            ssh_file_transfer.create_remote_dir(remote_dir)
+            ssh_file_transfer.upload_file(
+                local_path=row.src_path,
+                remote_path=row.dst_path,
+            )
+            if cfg.remove_local_files:
+                os.remove(row.src_path)
+        ssh_file_transfer.disconnect()
 
     # Save final CSVs
     df_output = df_output[CSV_COLUMNS]

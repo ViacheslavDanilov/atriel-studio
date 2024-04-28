@@ -163,17 +163,19 @@ def generate_csv_files(
                 progress((idx + 1) / total_pins)
             ssh_file_transfer.disconnect()
 
-        # Find duplicate titles
-        df_duplicates = df_output[df_output.duplicated(subset=['Column'], keep=False)]
-        print(f'Duplicates: {df_duplicates}')
-
         # Save final CSVs
         save_csv_files(
             df=df_output,
             save_dir=save_dir,
             num_csv_files=num_csv_files,
         )
-        msg = f'CSV(s) generated successfully!\n\nDirectory: {save_dir}'
+
+        # Find and save duplicates
+        df_duplicates = df_output[df_output.duplicated(subset=['Title'], keep=False)]
+        if len(df_duplicates) > 0:
+            df_duplicates.to_csv(os.path.join(save_dir, 'pins-duplicates.csv'), index=True)
+
+        msg = f'CSV(s) generated successfully!\n\nDirectory: {save_dir}\n\nDuplicates: {len(df_duplicates)}'
     except Exception as e:
         msg = f'Something went wrong!\n\nError: {e}'
 

@@ -183,16 +183,25 @@ def main(cfg: DictConfig) -> None:
     sample_dirs = filter_paths_by_category(sample_dirs_, cfg.pins_per_day)
 
     # Process samples by their paths
-    df_list = []
     sample_processor = SampleProcessor(
         url=URL,
         remote_root_dir=REMOTE_ROOT_DIR,
         column_names=CSV_COLUMNS,
     )
-    for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
-        df = sample_processor.process_sample(sample_dir)
-        df_list.append(df)
-    df = pd.concat(df_list, ignore_index=True)
+    attempt_count = 0
+    while True:
+        df_list = []
+        for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
+            df = sample_processor.process_sample(sample_dir)
+            df_list.append(df)
+        df = pd.concat(df_list, ignore_index=True)
+        if df['Title'].nunique() == len(df):
+            break
+        if attempt_count > 100:
+            raise ValueError(
+                'Could not create a dataframe without duplicates. Increase the number of attempts.',
+            )
+        attempt_count += 1
 
     # Check if there is enough sample for each category
     num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())

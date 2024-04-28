@@ -244,9 +244,12 @@ def main(cfg: DictConfig) -> None:
                 local_path=row.src_path,
                 remote_path=row.dst_path,
             )
-            if cfg.remove_local_files:
-                os.remove(row.src_path)
         ssh_file_transfer.disconnect()
+
+    # Remove local files
+    if cfg.remove_local_files:
+        for row in df_output.itertuples():
+            os.remove(row.src_path)
 
     # Save final CSVs
     df_output = df_output[CSV_COLUMNS]

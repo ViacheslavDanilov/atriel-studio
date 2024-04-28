@@ -162,11 +162,14 @@ def generate_csv_files(
                     local_path=row.src_path,
                     remote_path=row.dst_path,
                 )
-                if remove_local_files:
-                    os.remove(row.src_path)
                 # Update progress
                 progress((idx + 1) / total_pins)
             ssh_file_transfer.disconnect()
+
+        # Remove local files
+        if remove_local_files:
+            for row in df_output.itertuples():
+                os.remove(row.src_path)
 
         # Save final CSVs
         save_csv_files(

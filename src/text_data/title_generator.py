@@ -21,45 +21,40 @@ class TitleGenerator:
         self.desired_length = desired_length
         self.delimiter = delimiter
 
-    def generate_titles(
-        self,
-        num_titles: int,
-    ) -> List[str]:
+    def generate_titles(self, num_titles: int) -> List[str]:
         result: List[str] = []
         for _ in range(num_titles):
             keyword_list = self.df[self.keyword_column].tolist()
-            output_list = []
             used_keywords = set()
             attempt_count = 0  # Track the number of attempts to construct a title
+            title = ''
             while True:
                 attempt_count += 1
-                if attempt_count > 100:  # Limit the number of attempts
+                if attempt_count > 1000:  # Limit the number of attempts
                     raise ValueError(
                         'Failed to construct a title. Add more keywords or change min and max limits',
                     )
-                if len(keyword_list) > 0:
-                    keyword = random.choice(keyword_list).capitalize()
-                else:
-                    raise ValueError('Add more keywords or change min and max limits')
+
+                keyword = random.choice(keyword_list).capitalize()
                 if keyword in used_keywords:
                     continue  # Skip if keyword is already used
                 keyword_list = [v for v in keyword_list if v != keyword]
-                output_list.append(keyword)
+                title += f"{keyword}{self.delimiter}"
                 used_keywords.add(keyword)
-                title = self.delimiter.join(output_list)
                 title_length = len(title)
                 if self.desired_length <= title_length <= self.max_limit:
-                    result.append(title)
-                    break
+                    if title not in result:  # Check if title is unique
+                        result.append(title.rstrip(self.delimiter))
+                        break
                 elif title_length > self.max_limit:
-                    output_list.pop()  # Remove the last added keyword if title exceeds character limit
+                    break
         return result
 
 
 if __name__ == '__main__':
 
     # Test TitleGenerator class
-    num_images = 85
+    num_images = 20
     keyword_path = 'data/csv_generation/instagram-highlight-covers/black-celestial/keywords.csv'
     df = pd.read_csv(keyword_path)
     title_generator = TitleGenerator(

@@ -24,34 +24,38 @@ class TitleGenerator:
         self.delimiter = delimiter
 
     def generate_titles(self, num_titles: int) -> List[str]:
-        result: List[str] = []
+        generated_titles: List[str] = []
         for _ in range(num_titles):
             keyword_list = self.df[self.keyword_column].tolist()
-            used_keywords = set()
             attempt_count = 0  # Track the number of attempts to construct a title
             desired_length = random.randint(self.min_desired_length, self.max_desired_length)
-            title = ''
             while True:
                 attempt_count += 1
-                if attempt_count > 10000:  # Limit the number of attempts
+                if attempt_count > 100000:  # Limit the number of attempts
                     raise ValueError(
                         'Failed to construct a title. Add more keywords or change min and max limits',
                     )
 
-                keyword = random.choice(keyword_list).capitalize()
-                if keyword in used_keywords:
-                    continue  # Skip if keyword is already used
-                keyword_list = [v for v in keyword_list if v != keyword]
-                title += f"{keyword}{self.delimiter}"
-                used_keywords.add(keyword)
-                title_length = len(title)
-                if desired_length <= title_length <= self.max_limit:
-                    if title not in result:  # Check if title is unique
-                        result.append(title.rstrip(self.delimiter))
+                used_keywords = set()
+                title = ''
+                while len(title) < self.max_limit:
+                    keyword = random.choice(keyword_list).capitalize()
+                    if keyword in used_keywords:
+                        continue  # Skip if keyword is already used
+                    used_keywords.add(keyword)
+                    title += f"{keyword}{self.delimiter}"
+                    if len(title) > desired_length:
                         break
-                elif title_length > self.max_limit:
+
+                # Remove the delimiter from the end of the title
+                title = title.rstrip(self.delimiter)
+
+                # Check if title is unique and add it to the list
+                if title not in generated_titles:
+                    generated_titles.append(title)
                     break
-        return result
+
+        return generated_titles
 
 
 if __name__ == '__main__':

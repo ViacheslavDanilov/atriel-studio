@@ -149,7 +149,7 @@ def save_csv_files(
         end_idx = (idx + 1) * rows_per_csv
         df_chunk = df.iloc[start_idx:end_idx]
 
-        # Get the earliest publishing date in the chunk and format it as DDMMYY
+        # Get the earliest publishing date in the chunk and format it as month-day
         earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
         formatted_date = earliest_publish_date.strftime('%b-%d').lower()
 
@@ -191,6 +191,13 @@ def main(cfg: DictConfig) -> None:
     )
     for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
         df = sample_processor.process_sample(sample_dir)
+        # Check for duplicate titles
+        title_list = df['Title'].tolist()
+        if len(title_list) != len(set(title_list)):
+            sample_rel_dir = '/'.join(Path(sample_dir).parts[-2:])
+            log.info(
+                f'Sample: {sample_rel_dir} - Duplicate titles: {len(title_list) - len(set(title_list))}',
+            )
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 

@@ -172,6 +172,7 @@ def generate_csv_files(
                 os.remove(row.src_path)
 
         # Save final CSVs
+        df_output = df_output[CSV_COLUMNS]
         save_csv_files(
             df=df_output,
             save_dir=save_dir,

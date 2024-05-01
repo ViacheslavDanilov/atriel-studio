@@ -195,14 +195,10 @@ def main(cfg: DictConfig) -> None:
         df_list.append(df_)
     df_all = pd.concat(df_list, ignore_index=True)
     df = df_all.drop_duplicates(subset=['Title'], keep='first')
-    total_pins = len(df_all)
-    unique_titles = len(df['Title'].unique())
     unique_links = len(df_all['Link'].unique())
     assert (
         unique_links >= cfg.max_pins_per_csv
     ), f'Number of unique links exceeds max_pins_per_csv: {unique_links} vs {cfg.max_pins_per_csv}'
-    log.info(f'Total pins: {total_pins}')
-    log.info(f'Unique titles: {unique_titles}')
 
     # Check if there is enough sample for each category
     num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())
@@ -260,12 +256,20 @@ def main(cfg: DictConfig) -> None:
         save_dir=save_dir,
         num_csv_files=cfg.num_csv_files,
     )
-    saved_pins = len(df_output)
 
+    # Log summary
+    saved_pins = len(df_output)
+    total_pins = len(df_all)
+    total_titles = len(df_all['Title'])
+    total_links = len(df_all['Link'])
+    unique_titles = len(df_all['Title'].unique())
+    unique_links = len(df_all['Link'].unique())
     log.info(f'Total pins available: {total_pins}')
     log.info(f'Saved pins: {saved_pins}')
-    log.info(f'Unique titles: {len(df_output["Title"].unique())}')
-    log.info(f'Unique links: {len(df_output["Link"].unique())}')
+    log.info(f'Total titles: {total_titles}')
+    log.info(f'Total links: {total_links}')
+    log.info(f'Unique titles: {unique_titles}')
+    log.info(f'Unique links: {unique_links}')
 
     log.info('Complete')
 

@@ -104,11 +104,11 @@ def generate_csv_files(
             df_ = sample_processor.process_sample(sample_dir)
             df_list.append(df_)
         df_all = pd.concat(df_list, ignore_index=True)
-        df_duplicates = df_all[df_all.duplicated(subset=['Title'], keep=False)]
         df = df_all.drop_duplicates(subset=['Title'], keep='first')
-        total_pins = len(df_all)
-        duplicate_pins = len(df_duplicates['Title'].unique())
-        unique_pins = len(df['Title'].unique())
+        unique_links = len(df_all['Link'].unique())
+        assert (
+            unique_links >= max_pins_per_csv
+        ), f'Number of unique links exceeds max_pins_per_csv: {unique_links} vs {max_pins_per_csv}'
 
         # Check if there is enough sample for each category
         num_days = (max_pins_per_csv * num_csv_files) // sum(pins_per_day.values())
@@ -179,10 +179,23 @@ def generate_csv_files(
             num_csv_files=num_csv_files,
         )
 
+        # Log summary
         saved_pins = len(df_output)
-        pin_msg = f'Total pins available: {total_pins}\n\nUnique pins: {unique_pins}\n\nDuplicate pins: {duplicate_pins}\n\nSaved pins: {saved_pins}'
-        msg = f'CSV(s) generated successfully!\n\nSaved directory: {save_dir}\n\n'
-        msg += pin_msg
+        total_pins = len(df_all)
+        total_titles = len(df_all['Title'])
+        total_links = len(df_all['Link'])
+        unique_titles = len(df_all['Title'].unique())
+        unique_links = len(df_all['Link'].unique())
+        msg = (
+            f'CSV(s) generated successfully!\n\n'
+            f'Saved directory: {save_dir}\n\n'
+            f'Total pins available: {total_pins}\n\n'
+            f'Saved pins: {saved_pins}'
+            f'Total titles: {total_titles}\n\n'
+            f'Total links: {total_links}\n\n'
+            f'Unique titles: {unique_titles}\n\n'
+            f'Unique links: {unique_links}\n\n'
+        )
     except Exception as e:
         msg = f'Something went wrong!\n\nError: {e}'
 

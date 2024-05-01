@@ -67,22 +67,23 @@ def create_df_per_day(
     pins_added_per_category = {category: 0 for category in pins_per_day}
 
     # Shuffle the DataFrame for randomness
-    df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
+    df_remaining = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     # Iterate over each row in the shuffled DataFrame
     df_per_day_list = []
-    for _, row in df.iterrows():
+    for _, row in df_remaining.iterrows():
         category = row['category']
+        link = row['Link']
         num_pins = pins_per_day.get(category, 0)
 
-        # Check if the maximum number of pins for the category has been reached
+        # Check if the maximum number of pins for the category has been reached and the link is unique
         if pins_added_per_category[category] < num_pins:
             # Add the row to the DataFrame for the current day
             df_per_day_list.append(row)
             # Increment the count of pins added for the category
             pins_added_per_category[category] += 1
-            # Remove the selected row from consideration
-            df = df[df.index != row.name]
+            # Find all rows with the same link and remove them from df_remaining
+            df_remaining = df_remaining[df_remaining['Link'] != link]
 
         # Check if the pins for all categories have been added for the current day
         if all(
@@ -94,7 +95,7 @@ def create_df_per_day(
 
     df_day = pd.DataFrame(df_per_day_list)
 
-    return df_day, df
+    return df_day, df_remaining
 
 
 def verify_pin_availability(
@@ -193,14 +194,11 @@ def main(cfg: DictConfig) -> None:
         df_ = sample_processor.process_sample(sample_dir)
         df_list.append(df_)
     df_all = pd.concat(df_list, ignore_index=True)
-    df_duplicates = df_all[df_all.duplicated(subset=['Title'], keep=False)]
     df = df_all.drop_duplicates(subset=['Title'], keep='first')
-    total_pins = len(df_all)
-    duplicate_pins = len(df_duplicates['Title'].unique())
-    unique_pins = len(df['Title'].unique())
-    log.info(f'Total pins: {total_pins}')
-    log.info(f'Duplicate pins: {duplicate_pins}')
-    log.info(f'Unique pins: {unique_pins}')
+    unique_links = len(df_all['Link'].unique())
+    assert (
+        unique_links >= cfg.max_pins_per_csv
+    ), f'Number of unique links exceeds max_pins_per_csv: {unique_links} vs {cfg.max_pins_per_csv}'
 
     # Check if there is enough sample for each category
     num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())
@@ -258,6 +256,20 @@ def main(cfg: DictConfig) -> None:
         save_dir=save_dir,
         num_csv_files=cfg.num_csv_files,
     )
+
+    # Log summary
+    saved_pins = len(df_output)
+    total_pins = len(df_all)
+    total_titles = len(df_all['Title'])
+    total_links = len(df_all['Link'])
+    unique_titles = len(df_all['Title'].unique())
+    unique_links = len(df_all['Link'].unique())
+    log.info(f'Total pins available: {total_pins}')
+    log.info(f'Saved pins: {saved_pins}')
+    log.info(f'Total titles: {total_titles}')
+    log.info(f'Total links: {total_links}')
+    log.info(f'Unique titles: {unique_titles}')
+    log.info(f'Unique links: {unique_links}')
 
     log.info('Complete')
 

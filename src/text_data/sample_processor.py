@@ -47,9 +47,7 @@ class SampleProcessor:
         img_path: str,
         remote_root_dir: str,
     ) -> str:
-        parts = list(Path(img_path).parts[-4:])
-        img_stem = str(Path(img_path).stem)
-        parts[-2] = f'{parts[-2]}-{img_stem}'
+        parts = Path(img_path).parts[-4:]
         relative_path = '/'.join(parts)
         img_remote_path = os.path.join(remote_root_dir, relative_path)
         return img_remote_path

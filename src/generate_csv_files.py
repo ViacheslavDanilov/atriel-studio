@@ -67,15 +67,15 @@ def create_df_per_day(
     pins_added_per_category = {category: 0 for category in pins_per_day}
 
     # Shuffle the DataFrame for randomness
-    df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
+    df_remaining = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     # Iterate over each row in the shuffled DataFrame
     df_per_day_list = []
     unique_links = []
-    for _, row in df.iterrows():
+    for _, row in df_remaining.iterrows():
         category = row['category']
-        num_pins = pins_per_day.get(category, 0)
         link = row['Link']
+        num_pins = pins_per_day.get(category, 0)
 
         # Check if the maximum number of pins for the category has been reached and the link is unique
         if pins_added_per_category[category] < num_pins and link not in unique_links:
@@ -84,7 +84,7 @@ def create_df_per_day(
             # Increment the count of pins added for the category
             pins_added_per_category[category] += 1
             # Remove the selected row from consideration
-            df = df[df.index != row.name]
+            df_remaining = df_remaining[df_remaining.index != row.name]
             # Add the link to the list of unique links
             unique_links.append(link)
 
@@ -98,7 +98,7 @@ def create_df_per_day(
 
     df_day = pd.DataFrame(df_per_day_list)
 
-    return df_day, df
+    return df_day, df_remaining
 
 
 def verify_pin_availability(

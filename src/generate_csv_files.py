@@ -258,6 +258,8 @@ def main(cfg: DictConfig) -> None:
         save_dir=save_dir,
         num_csv_files=cfg.num_csv_files,
     )
+    saved_pins = len(df_output)
+    log.info(f'Saved pins: {saved_pins}')
 
     log.info('Complete')
 

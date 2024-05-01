@@ -71,18 +71,22 @@ def create_df_per_day(
 
     # Iterate over each row in the shuffled DataFrame
     df_per_day_list = []
+    unique_links = []
     for _, row in df.iterrows():
         category = row['category']
         num_pins = pins_per_day.get(category, 0)
+        link = row['Link']
 
-        # Check if the maximum number of pins for the category has been reached
-        if pins_added_per_category[category] < num_pins:
+        # Check if the maximum number of pins for the category has been reached and the link is unique
+        if pins_added_per_category[category] < num_pins and link not in unique_links:
             # Add the row to the DataFrame for the current day
             df_per_day_list.append(row)
             # Increment the count of pins added for the category
             pins_added_per_category[category] += 1
             # Remove the selected row from consideration
             df = df[df.index != row.name]
+            # Add the link to the list of unique links
+            unique_links.append(link)
 
         # Check if the pins for all categories have been added for the current day
         if all(

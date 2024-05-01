@@ -14,6 +14,6 @@ pins_per_day:
 num_csv_files: 1
 max_pins_per_csv: 150
 copy_files_to_server: false
-remove_local_files: true
+remove_local_files: false
 start_date: # Format: YYYY-MM-DD for example: 2024-04-25. If None, use current date
 seed: 11

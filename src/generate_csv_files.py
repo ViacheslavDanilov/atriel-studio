@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from glob import glob
@@ -70,20 +71,22 @@ def create_df_per_day(
     df_remaining = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     # Iterate over each row in the shuffled DataFrame
+    unique_links = []
     df_per_day_list = []
-    for _, row in df_remaining.iterrows():
+    for row_idx, row in df_remaining.iterrows():
         category = row['category']
-        link = row['Link']
         num_pins = pins_per_day.get(category, 0)
 
         # Check if the maximum number of pins for the category has been reached and the link is unique
-        if pins_added_per_category[category] < num_pins:
+        if pins_added_per_category[category] < num_pins and row['Link'] not in unique_links:
             # Add the row to the DataFrame for the current day
             df_per_day_list.append(row)
             # Increment the count of pins added for the category
             pins_added_per_category[category] += 1
-            # Find all rows with the same link and remove them from df_remaining
-            df_remaining = df_remaining[df_remaining['Link'] != link]
+            # Delete the row from df_remaining
+            df_remaining = df_remaining.drop(index=row_idx)
+            # Add the link to the list of unique links
+            unique_links.append(row['Link'])
 
         # Check if the pins for all categories have been added for the current day
         if all(
@@ -194,35 +197,31 @@ def main(cfg: DictConfig) -> None:
         df_ = sample_processor.process_sample(sample_dir)
         df_list.append(df_)
     df_all = pd.concat(df_list, ignore_index=True)
+    # TODO: check if we do need to drop duplicates
     df = df_all.drop_duplicates(subset=['Title'], keep='first')
-    unique_links = len(df_all['Link'].unique())
-    assert (
-        unique_links >= cfg.max_pins_per_csv
-    ), f'Number of unique links exceeds max_pins_per_csv: {unique_links} vs {cfg.max_pins_per_csv}'
 
-    # Check if there is enough sample for each category
-    num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())
-    verify_pin_availability(df, cfg.pins_per_day, num_days=num_days)
+    # Check if there is enough samples for each category
+    verify_pin_availability(df, cfg.pins_per_day, num_days=cfg.num_days)
 
     # Create df_day_list with DataFrames representing pins for each day
     df_day_list = []
     df_remaining = df.copy()
-    for _ in range(num_days):
+    for _ in range(cfg.num_days):
         df_day, df_remaining = create_df_per_day(
             df=df_remaining,
             pins_per_day=cfg.pins_per_day,
             seed=cfg.seed,
         )
         df_day_list.append(df_day)
-    df_output = pd.concat(df_day_list, ignore_index=True)
 
     # Add publish dates to the dataframe
-    publish_date_generator = PublishDateGenerator(start_date=cfg.start_date)
-    publish_date_list = publish_date_generator.generate_times(
-        total_pins=len(df_output),
-        num_pins_per_day=sum(cfg.pins_per_day.values()),
-    )
-    df_output['Publish date'] = publish_date_list
+    current_date = datetime.datetime.strptime(cfg.start_date, '%Y-%m-%d')
+    for day_idx, df_day in enumerate(df_day_list):
+        publish_date_generator = PublishDateGenerator(date=current_date)
+        publish_date_list = publish_date_generator.generate_times(num_pins_per_day=len(df_day))
+        df_day['Publish date'] = publish_date_list
+        df_day_list[day_idx] = df_day
+        current_date += datetime.timedelta(days=1)
 
     # Upload images to the remote server
     if cfg.copy_files_to_server:

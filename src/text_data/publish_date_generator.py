@@ -96,52 +96,48 @@ class PublishDateGenerator:
 
     def __init__(
         self,
-        start_date: str = None,
+        date: datetime.datetime = None,
     ):
-        if start_date is None:
-            self.start_date = datetime.datetime.now()
+        if date is None:
+            self.date = datetime.datetime.now()
         else:
-            self.start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            self.date = date
 
     def generate_times(
         self,
-        total_pins: int,
         num_pins_per_day: int,
     ) -> List[str]:
         utc = pytz.UTC
         publish_time_list = []
-        current_date = self.start_date
-        for _ in range(total_pins // num_pins_per_day):
-            day_of_week = current_date.strftime('%A')
-            times_for_day = self.DEFAULT_TIMES.get(
-                day_of_week,
-                ['09:00:00'],
-            )  # Default time is 09:00:00 if not specified
-            for time_index in range(num_pins_per_day):
-                time = times_for_day[time_index % len(times_for_day)]
-                publish_date_time = utc.localize(
-                    current_date.replace(
-                        hour=int(time[:2]),
-                        minute=int(time[3:5]),
-                        second=int(time[6:]),
-                    ),
-                )
-                publish_time_list.append(publish_date_time.strftime('%Y-%m-%dT%H:%M:%S'))
-            current_date += datetime.timedelta(days=1)
+        day_of_week = self.date.strftime('%A')
+        # Default time is 13:00:00 if not specified
+        times_for_day = self.DEFAULT_TIMES.get(day_of_week, ['13:00:00'])
+
+        for time_index in range(num_pins_per_day):
+            time = times_for_day[time_index % len(times_for_day)]
+            publish_date_time = utc.localize(
+                self.date.replace(
+                    hour=int(time[:2]),
+                    minute=int(time[3:5]),
+                    second=int(time[6:]),
+                ),
+            )
+            publish_time_list.append(publish_date_time.strftime('%Y-%m-%dT%H:%M:%S'))
+
         return publish_time_list
 
 
 if __name__ == '__main__':
 
     # Test PublishDateGenerator class
+    start_date = '2024-04-21'
+    current_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     pins_dict = {
         'canva-instagram-templates': 5,
         'instagram-highlight-covers': 3,
         'instagram-puzzle-feed': 2,
     }
-    publish_date_generator = PublishDateGenerator(start_date='2024-04-21')
-    time_list = publish_date_generator.generate_times(
-        total_pins=50,
-        num_pins_per_day=sum(pins_dict.values()),
-    )
+    num_pins_per_day = sum(pins_dict.values())
+    publish_date_generator = PublishDateGenerator(date=current_date)
+    time_list = publish_date_generator.generate_times(num_pins_per_day)
     print('Generated Times:', time_list)

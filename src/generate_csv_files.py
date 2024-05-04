@@ -253,18 +253,13 @@ def main(cfg: DictConfig) -> None:
     )
 
     # Log summary
-    saved_pins = len(df_out)
     total_pins = len(df_all)
-    total_titles = len(df_all['Title'])
-    total_links = len(df_all['Link'])
-    unique_titles = len(df_all['Title'].unique())
-    unique_links = len(df_all['Link'].unique())
+    num_saved_pins = len(df_out)
+    num_products = len(df_out['Link'].unique())
+    log.info('')
     log.info(f'Total pins available: {total_pins}')
-    log.info(f'Saved pins: {saved_pins}')
-    log.info(f'Total titles: {total_titles}')
-    log.info(f'Total links: {total_links}')
-    log.info(f'Unique titles: {unique_titles}')
-    log.info(f'Unique links: {unique_links}')
+    log.info(f'Saved pins: {num_saved_pins}')
+    log.info(f'Products advertised: {num_products}')
 
     log.info('Complete')
 

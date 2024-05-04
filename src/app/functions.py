@@ -1,3 +1,4 @@
+import datetime
 import os
 from glob import glob
 from pathlib import Path
@@ -62,8 +63,7 @@ def generate_images(
 def generate_csv_files(
     data_dir: str,
     save_dir: str,
-    num_csv_files: int,
-    max_pins_per_csv: int,
+    num_days: int,
     start_date: str,
     copy_files_to_server: bool,
     remove_local_files: bool,
@@ -105,13 +105,8 @@ def generate_csv_files(
             df_list.append(df_)
         df_all = pd.concat(df_list, ignore_index=True)
         df = df_all.drop_duplicates(subset=['Title'], keep='first')
-        unique_links = len(df_all['Link'].unique())
-        assert (
-            unique_links >= max_pins_per_csv
-        ), f'Number of unique links exceeds max_pins_per_csv: {unique_links} vs {max_pins_per_csv}'
 
-        # Check if there is enough sample for each category
-        num_days = (max_pins_per_csv * num_csv_files) // sum(pins_per_day.values())
+        # Check if there is enough samples for each category
         verify_pin_availability(df, pins_per_day, num_days=num_days)
 
         # Create df_day_list with DataFrames representing pins for each day
@@ -124,17 +119,18 @@ def generate_csv_files(
                 seed=seed,
             )
             df_day_list.append(df_day)
-        df_output = pd.concat(df_day_list, ignore_index=True)
 
         # Add publish dates to the dataframe
-        publish_date_generator = PublishDateGenerator(start_date=start_date)
-        publish_date_list = publish_date_generator.generate_times(
-            total_pins=len(df_output),
-            num_pins_per_day=sum(pins_per_day.values()),
-        )
-        df_output['Publish date'] = publish_date_list
+        current_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        for day_idx, df_day in enumerate(df_day_list):
+            publish_date_generator = PublishDateGenerator(date=current_date)
+            publish_date_list = publish_date_generator.generate_times(num_pins_per_day=len(df_day))
+            df_day['Publish date'] = publish_date_list
+            df_day_list[day_idx] = df_day
+            current_date += datetime.timedelta(days=1)
 
         # Upload images to the remote server
+        df_out = pd.concat(df_day_list, ignore_index=True)
         if copy_files_to_server:
             ssh_file_transfer = SSHFileTransfer(
                 username=USERNAME,
@@ -145,12 +141,12 @@ def generate_csv_files(
             )
             ssh_file_transfer.connect()
             ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-            total_pins = len(df_output)
+            total_pins = len(df_out)
             progress = gr.Progress(track_tqdm=True)
             progress(0, desc='Starting')
             for idx, row in enumerate(
                 tqdm(
-                    df_output.itertuples(),
+                    df_out.itertuples(),
                     desc='Uploading images',
                     unit='images',
                     total=total_pins,
@@ -168,33 +164,26 @@ def generate_csv_files(
 
         # Remove local files
         if remove_local_files:
-            for row in df_output.itertuples():
+            for row in df_out.itertuples():
                 os.remove(row.src_path)
 
         # Save final CSVs
-        df_output = df_output[CSV_COLUMNS]
+        df_out = df_out[CSV_COLUMNS]
         save_csv_files(
-            df=df_output,
+            df=df_out,
             save_dir=save_dir,
-            num_csv_files=num_csv_files,
         )
 
         # Log summary
-        saved_pins = len(df_output)
         total_pins = len(df_all)
-        total_titles = len(df_all['Title'])
-        total_links = len(df_all['Link'])
-        unique_titles = len(df_all['Title'].unique())
-        unique_links = len(df_all['Link'].unique())
+        num_saved_pins = len(df_out)
+        num_products = len(df_out['Link'].unique())
         msg = (
             f'CSV(s) generated successfully!\n\n'
             f'Saved directory: {save_dir}\n\n'
             f'Total pins available: {total_pins}\n\n'
-            f'Saved pins: {saved_pins}'
-            f'Total titles: {total_titles}\n\n'
-            f'Total links: {total_links}\n\n'
-            f'Unique titles: {unique_titles}\n\n'
-            f'Unique links: {unique_links}\n\n'
+            f'Saved pins: {num_saved_pins}\n\n'
+            f'Products advertised: {num_products}\n\n'
         )
     except Exception as e:
         msg = f'Something went wrong!\n\nError: {e}'

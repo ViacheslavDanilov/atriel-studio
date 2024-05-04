@@ -11,9 +11,8 @@ pins_per_day:
   business-cards: 0
   airbnb-welcome-book: 0
   price-and-service-guide: 0
-num_csv_files: 1
-max_pins_per_csv: 70
+num_days: 2
 copy_files_to_server: false
 remove_local_files: false
-start_date: # Format: YYYY-MM-DD for example: 2024-04-25. If None, use current date
+start_date: 2024-05-25 # Format: YYYY-MM-DD for example 2024-05-25
 seed: 11

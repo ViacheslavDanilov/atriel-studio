@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from glob import glob
@@ -70,20 +71,22 @@ def create_df_per_day(
     df_remaining = df.sample(frac=1, random_state=seed).reset_index(drop=True)
 
     # Iterate over each row in the shuffled DataFrame
+    unique_links = []
     df_per_day_list = []
-    for _, row in df_remaining.iterrows():
+    for row_idx, row in df_remaining.iterrows():
         category = row['category']
-        link = row['Link']
         num_pins = pins_per_day.get(category, 0)
 
         # Check if the maximum number of pins for the category has been reached and the link is unique
-        if pins_added_per_category[category] < num_pins:
+        if pins_added_per_category[category] < num_pins and row['Link'] not in unique_links:
             # Add the row to the DataFrame for the current day
             df_per_day_list.append(row)
             # Increment the count of pins added for the category
             pins_added_per_category[category] += 1
-            # Find all rows with the same link and remove them from df_remaining
-            df_remaining = df_remaining[df_remaining['Link'] != link]
+            # Delete the row from df_remaining
+            df_remaining = df_remaining.drop(index=row_idx)
+            # Add the link to the list of unique links
+            unique_links.append(row['Link'])
 
         # Check if the pins for all categories have been added for the current day
         if all(
@@ -94,6 +97,7 @@ def create_df_per_day(
             break
 
     df_day = pd.DataFrame(df_per_day_list)
+    df_remaining = df_remaining.reset_index(drop=True)
 
     return df_day, df_remaining
 
@@ -133,26 +137,22 @@ def verify_pin_availability(
 def save_csv_files(
     df: pd.DataFrame,
     save_dir: str,
-    num_csv_files: int = 2,
 ) -> None:
-    if len(df) % num_csv_files != 0:
-        raise ValueError(
-            f'Cannot split DataFrame evenly. Number of rows: {len(df)}. Number of CSV files: {num_csv_files}.',
-        )
+    os.makedirs(save_dir, exist_ok=True)
 
-    # Calculate the number of rows per CSV file
-    rows_per_csv = len(df) // num_csv_files
+    # Create a new column 'Auxiliary date' by converting 'Publish date' column to datetime
+    df['Auxiliary date'] = pd.to_datetime(df['Publish date'])
 
     # Split DataFrame into chunks and save each chunk to a separate CSV file
-    os.makedirs(save_dir, exist_ok=True)
-    for idx in range(num_csv_files):
-        start_idx = idx * rows_per_csv
-        end_idx = (idx + 1) * rows_per_csv
-        df_chunk = df.iloc[start_idx:end_idx]
+    unique_dates = df['Auxiliary date'].dt.date.unique()
+    for date in unique_dates:
+        df_chunk = df[df['Auxiliary date'].dt.date == date]
 
-        # Get the earliest publishing date in the chunk and format it as month-day
-        earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
-        formatted_date = earliest_publish_date.strftime('%b-%d').lower()
+        # Get the formatted date for the CSV filename
+        formatted_date = date.strftime('%b-%d').lower()
+
+        # Drop the 'Auxiliary date' column
+        df_chunk = df_chunk.drop(columns=['Auxiliary date'])
 
         # Save chunk to CSV with filename based on the formatted date
         csv_filename = f'pins-{formatted_date}.csv'
@@ -195,36 +195,32 @@ def main(cfg: DictConfig) -> None:
         df_list.append(df_)
     df_all = pd.concat(df_list, ignore_index=True)
     df = df_all.drop_duplicates(subset=['Title'], keep='first')
-    unique_links = len(df_all['Link'].unique())
-    assert (
-        unique_links >= cfg.max_pins_per_csv
-    ), f'Number of unique links exceeds max_pins_per_csv: {unique_links} vs {cfg.max_pins_per_csv}'
 
-    # Check if there is enough sample for each category
-    num_days = (cfg.max_pins_per_csv * cfg.num_csv_files) // sum(cfg.pins_per_day.values())
-    verify_pin_availability(df, cfg.pins_per_day, num_days=num_days)
+    # Check if there is enough samples for each category
+    verify_pin_availability(df, cfg.pins_per_day, num_days=cfg.num_days)
 
     # Create df_day_list with DataFrames representing pins for each day
     df_day_list = []
     df_remaining = df.copy()
-    for _ in range(num_days):
+    for _ in range(cfg.num_days):
         df_day, df_remaining = create_df_per_day(
             df=df_remaining,
             pins_per_day=cfg.pins_per_day,
             seed=cfg.seed,
         )
         df_day_list.append(df_day)
-    df_output = pd.concat(df_day_list, ignore_index=True)
 
     # Add publish dates to the dataframe
-    publish_date_generator = PublishDateGenerator(start_date=cfg.start_date)
-    publish_date_list = publish_date_generator.generate_times(
-        total_pins=len(df_output),
-        num_pins_per_day=sum(cfg.pins_per_day.values()),
-    )
-    df_output['Publish date'] = publish_date_list
+    current_date = datetime.datetime.strptime(cfg.start_date, '%Y-%m-%d')
+    for day_idx, df_day in enumerate(df_day_list):
+        publish_date_generator = PublishDateGenerator(date=current_date)
+        publish_date_list = publish_date_generator.generate_times(num_pins_per_day=len(df_day))
+        df_day['Publish date'] = publish_date_list
+        df_day_list[day_idx] = df_day
+        current_date += datetime.timedelta(days=1)
 
     # Upload images to the remote server
+    df_out = pd.concat(df_day_list, ignore_index=True)
     if cfg.copy_files_to_server:
         ssh_file_transfer = SSHFileTransfer(
             username=USERNAME,
@@ -235,7 +231,7 @@ def main(cfg: DictConfig) -> None:
         )
         ssh_file_transfer.connect()
         ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-        for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
+        for row in tqdm(df_out.itertuples(), desc='Uploading images', unit='images'):
             remote_dir = str(Path(row.dst_path).parent)
             ssh_file_transfer.create_remote_dir(remote_dir)
             ssh_file_transfer.upload_file(
@@ -246,30 +242,24 @@ def main(cfg: DictConfig) -> None:
 
     # Remove local files
     if cfg.remove_local_files:
-        for row in df_output.itertuples():
+        for row in df_out.itertuples():
             os.remove(row.src_path)
 
     # Save final CSVs
-    df_output = df_output[CSV_COLUMNS]
+    df_out = df_out[CSV_COLUMNS]
     save_csv_files(
-        df=df_output,
+        df=df_out,
         save_dir=save_dir,
-        num_csv_files=cfg.num_csv_files,
     )
 
     # Log summary
-    saved_pins = len(df_output)
     total_pins = len(df_all)
-    total_titles = len(df_all['Title'])
-    total_links = len(df_all['Link'])
-    unique_titles = len(df_all['Title'].unique())
-    unique_links = len(df_all['Link'].unique())
+    num_saved_pins = len(df_out)
+    num_products = len(df_out['Link'].unique())
+    log.info('')
     log.info(f'Total pins available: {total_pins}')
-    log.info(f'Saved pins: {saved_pins}')
-    log.info(f'Total titles: {total_titles}')
-    log.info(f'Total links: {total_links}')
-    log.info(f'Unique titles: {unique_titles}')
-    log.info(f'Unique links: {unique_links}')
+    log.info(f'Saved pins: {num_saved_pins}')
+    log.info(f'Products advertised: {num_products}')
 
     log.info('Complete')
 

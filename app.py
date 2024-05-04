@@ -61,21 +61,13 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
             )
         # Tab 2 - Row 2
         with gr.Row():
-            num_csv_files = gr.Slider(
-                label='Number of CSV Files',
+            num_days = gr.Slider(
+                label='Number of days',
                 minimum=1,
-                maximum=5,
+                maximum=30,
                 step=1,
                 value=1,
-                info='Choose between 1 and 5',
-            )
-            max_pins_per_csv = gr.Slider(
-                label='Max Pins Per CSV',
-                minimum=1,
-                maximum=200,
-                step=1,
-                value=3,
-                info='Choose between 1 and 200',
+                info='Affects the number of CSV files created',
             )
             today = datetime.today().strftime('%Y-%m-%d')
             start_date = gr.Textbox(
@@ -101,7 +93,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 minimum=0,
                 maximum=10,
                 step=1,
-                value=1,
+                value=7,
                 info='Choose between 0 and 10',
             )
             pins_per_day_instagram_highlight_covers = gr.Slider(
@@ -109,7 +101,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 minimum=0,
                 maximum=10,
                 step=1,
-                value=1,
+                value=2,
                 info='Choose between 0 and 10',
             )
             pins_per_day_instagram_puzzle_feed = gr.Slider(
@@ -154,8 +146,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
             inputs=[
                 data_dir,
                 save_dir,
-                num_csv_files,
-                max_pins_per_csv,
+                num_days,
                 start_date,
                 copy_files_to_server,
                 remove_local_files,

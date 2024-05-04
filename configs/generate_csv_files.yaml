@@ -14,5 +14,5 @@ pins_per_day:
 num_days: 2
 copy_files_to_server: false
 remove_local_files: false
-start_date: 2024-05-25 # Format: YYYY-MM-DD for example: 2024-04-25
+start_date: 2024-05-25 # Format: YYYY-MM-DD for example 2024-05-25
 seed: 11

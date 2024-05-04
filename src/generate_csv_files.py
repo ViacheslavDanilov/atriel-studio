@@ -97,6 +97,7 @@ def create_df_per_day(
             break
 
     df_day = pd.DataFrame(df_per_day_list)
+    df_remaining = df_remaining.reset_index(drop=True)
 
     return df_day, df_remaining
 
@@ -136,26 +137,22 @@ def verify_pin_availability(
 def save_csv_files(
     df: pd.DataFrame,
     save_dir: str,
-    num_csv_files: int = 2,
 ) -> None:
-    if len(df) % num_csv_files != 0:
-        raise ValueError(
-            f'Cannot split DataFrame evenly. Number of rows: {len(df)}. Number of CSV files: {num_csv_files}.',
-        )
+    os.makedirs(save_dir, exist_ok=True)
 
-    # Calculate the number of rows per CSV file
-    rows_per_csv = len(df) // num_csv_files
+    # Create a new column 'Auxiliary date' by converting 'Publish date' column to datetime
+    df['Auxiliary date'] = pd.to_datetime(df['Publish date'])
 
     # Split DataFrame into chunks and save each chunk to a separate CSV file
-    os.makedirs(save_dir, exist_ok=True)
-    for idx in range(num_csv_files):
-        start_idx = idx * rows_per_csv
-        end_idx = (idx + 1) * rows_per_csv
-        df_chunk = df.iloc[start_idx:end_idx]
+    unique_dates = df['Auxiliary date'].dt.date.unique()
+    for date in unique_dates:
+        df_chunk = df[df['Auxiliary date'].dt.date == date]
 
-        # Get the earliest publishing date in the chunk and format it as month-day
-        earliest_publish_date = pd.to_datetime(df_chunk['Publish date'].iloc[0])
-        formatted_date = earliest_publish_date.strftime('%b-%d').lower()
+        # Get the formatted date for the CSV filename
+        formatted_date = date.strftime('%b-%d').lower()
+
+        # Drop the 'Auxiliary date' column
+        df_chunk = df_chunk.drop(columns=['Auxiliary date'])
 
         # Save chunk to CSV with filename based on the formatted date
         csv_filename = f'pins-{formatted_date}.csv'
@@ -197,7 +194,6 @@ def main(cfg: DictConfig) -> None:
         df_ = sample_processor.process_sample(sample_dir)
         df_list.append(df_)
     df_all = pd.concat(df_list, ignore_index=True)
-    # TODO: check if we do need to drop duplicates
     df = df_all.drop_duplicates(subset=['Title'], keep='first')
 
     # Check if there is enough samples for each category
@@ -224,6 +220,7 @@ def main(cfg: DictConfig) -> None:
         current_date += datetime.timedelta(days=1)
 
     # Upload images to the remote server
+    df_out = pd.concat(df_day_list, ignore_index=True)
     if cfg.copy_files_to_server:
         ssh_file_transfer = SSHFileTransfer(
             username=USERNAME,
@@ -234,7 +231,7 @@ def main(cfg: DictConfig) -> None:
         )
         ssh_file_transfer.connect()
         ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-        for row in tqdm(df_output.itertuples(), desc='Uploading images', unit='images'):
+        for row in tqdm(df_out.itertuples(), desc='Uploading images', unit='images'):
             remote_dir = str(Path(row.dst_path).parent)
             ssh_file_transfer.create_remote_dir(remote_dir)
             ssh_file_transfer.upload_file(
@@ -245,19 +242,18 @@ def main(cfg: DictConfig) -> None:
 
     # Remove local files
     if cfg.remove_local_files:
-        for row in df_output.itertuples():
+        for row in df_out.itertuples():
             os.remove(row.src_path)
 
     # Save final CSVs
-    df_output = df_output[CSV_COLUMNS]
+    df_out = df_out[CSV_COLUMNS]
     save_csv_files(
-        df=df_output,
+        df=df_out,
         save_dir=save_dir,
-        num_csv_files=cfg.num_csv_files,
     )
 
     # Log summary
-    saved_pins = len(df_output)
+    saved_pins = len(df_out)
     total_pins = len(df_all)
     total_titles = len(df_all['Title'])
     total_links = len(df_all['Link'])

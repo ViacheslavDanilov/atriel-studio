@@ -1,0 +1,33 @@
+# Use the official ContinuumIO miniconda3 image
+FROM continuumio/miniconda3
+
+# Set the working directory
+WORKDIR /atriel-studio
+
+# Install git
+RUN apt-get update && apt-get install -y git libgl1-mesa-glx libglib2.0-0
+
+# Clone the repository
+# RUN git clone https://github.com/ViacheslavDanilov/atriel-studio.git .
+RUN git clone --branch docker https://github.com/ViacheslavDanilov/atriel-studio.git .
+
+# Install dependencies
+RUN conda env create --file environment.yaml --verbose
+
+# Copy the .env file to the working directory
+COPY .env .
+
+# Make RUN commands use the new environment
+SHELL ["conda", "run", "-n", "atriel", "/bin/bash", "-c"]
+
+# Expose the port that your app runs on
+EXPOSE 7860
+
+# Set the environment variable to ensure Gradio listens on all network interfaces
+ENV GRADIO_SERVER_NAME="0.0.0.0"
+
+# Set the default command to an interactive shell
+CMD ["/bin/bash"]
+
+# Run the application
+# CMD ["conda", "run", "--no-capture-output", "-n", "atriel", "python", "app.py"]

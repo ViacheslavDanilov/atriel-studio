@@ -29,7 +29,7 @@ The shop is available on multiple platforms and marketplaces:
 <br>
 <p align="center">
   <a href="https://atriel-studio.com/product/esthetician-instagram-posts-02/" target="_blank">
-    <img id="figure-2" width="80%" height="80%" src=".assets/esthetician_instagram_bundle.jpg" alt="Esthetician instagram bundle">
+    <img id="figure-2" width="70%" height="70%" src=".assets/esthetician_instagram_bundle.jpg" alt="Esthetician instagram bundle">
   </a>
 </p>
 
@@ -40,7 +40,7 @@ The shop is available on multiple platforms and marketplaces:
 <br>
 <p align="center">
   <a href="https://atriel-studio.com/product/airbnb-guest-book-template-01/" target="_blank">
-    <img id="figure-2" width="80%" height="80%" src=".assets/airbnb_guest_book.jpg" alt="Airbnb guestbook">
+    <img id="figure-2" width="70%" height="70%" src=".assets/airbnb_guest_book.jpg" alt="Airbnb guestbook">
   </a>
 </p>
 

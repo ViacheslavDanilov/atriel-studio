@@ -3,6 +3,7 @@
 <a name="contents"></a>
 ## 📖 Contents
 - [Introduction](#introduction)
+- [Products](#products)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Docker Running](#docker)
@@ -22,12 +23,18 @@ The shop is available on multiple platforms and marketplaces:
 - **Creative Market:** https://creativemarket.com/LiliesandBerries
 - **Pinterest:** https://creativemarket.com/LiliesandBerries
 
+
+<a name="products"></a>
+## 🛍️ Products
+<br>
 <p align="center">
-  <img id="figure-3" width="100%" height="100%" src=".assets/model_comparison.jpg" alt="Model comparison">
+  <a href="https://atriel-studio.com/product/esthetician-instagram-posts-02/" target="_blank">
+    <img id="figure-2" width="80%" height="80%" src=".assets/esthetician_instagram_bundle.jpg" alt="Esthetician instagram bundle">
+  </a>
 </p>
 
 <p align="center">
-    <em><strong>Figure 3.</strong> Comparison of models for microvascular segmentation in tissue-engineered vascular grafts.</em>
+    <em><a href="https://atriel-studio.com/product/esthetician-instagram-posts-02/" target="_blank">Instagram templates for Estheticians and Beauty Business Owners</a></em>
 </p>
 
 

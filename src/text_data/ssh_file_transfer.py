@@ -83,7 +83,7 @@ class SSHFileTransfer:
 
 if __name__ == '__main__':
     load_dotenv()
-    hostname = os.environ.get('HOSTNAME')
+    hostname = os.environ.get('SERVER_NAME')
     username = os.environ.get('USERNAME')
     password = os.environ.get('PASSWORD')
     port = int(os.environ.get('PORT'))

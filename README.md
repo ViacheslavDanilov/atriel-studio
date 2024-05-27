@@ -118,7 +118,7 @@ docker run -it -v /Users/viacheslav.danilov/projects/personal/atriel-studio:/atr
 </p>
 
 <p align="center">
-    <em>Interface for bulk upload pins to Pinterest.</em>
+    <em>Interface for bulk upload pins to Pinterest</em>
 </p>
 
 
@@ -127,5 +127,5 @@ docker run -it -v /Users/viacheslav.danilov/projects/personal/atriel-studio:/atr
 </p>
 
 <p align="center">
-    <em>Interface for image generation pipeline.</em>
+    <em>Interface for image generation pipeline</em>
 </p>

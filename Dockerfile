@@ -4,15 +4,10 @@ FROM continuumio/miniconda3
 # Set the working directory
 WORKDIR /atriel-studio
 
-# Set the environment variables
-ENV GRADIO_SERVER_PORT=7860
-ENV SSH_PORT=7822
-
 # Install dependencies
 RUN apt-get update && apt-get install -y git libgl1-mesa-glx libglib2.0-0
 
 # Clone the repository
-# RUN git clone https://github.com/ViacheslavDanilov/atriel-studio.git .
 RUN git clone --branch docker https://github.com/ViacheslavDanilov/atriel-studio.git .
 
 # Install dependencies
@@ -26,10 +21,6 @@ SHELL ["conda", "run", "-n", "atriel", "/bin/bash", "-c"]
 
 # Activate environment and install the project as a package
 RUN pip install -e .
-
-# Expose the port that your app runs on
-EXPOSE $GRADIO_SERVER_PORT
-EXPOSE $SSH_PORT
 
 # Run the application
 CMD ["conda", "run", "--no-capture-output", "-n", "atriel", "python", "app.py"]

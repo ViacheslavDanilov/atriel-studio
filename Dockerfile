@@ -8,7 +8,7 @@ WORKDIR /atriel-studio
 RUN apt-get update && apt-get install -y git libgl1-mesa-glx libglib2.0-0
 
 # Clone the repository
-RUN git clone --branch docker https://github.com/ViacheslavDanilov/atriel-studio.git .
+RUN git clone --branch main https://github.com/ViacheslavDanilov/atriel-studio.git .
 
 # Install dependencies
 RUN conda env create --file environment.yaml --verbose

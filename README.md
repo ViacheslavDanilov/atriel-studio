@@ -6,6 +6,7 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Docker Running](#docker)
+- [Interfaces](#interfaces)
 
 
 <a name="introduction"></a>
@@ -74,11 +75,14 @@ cd atriel-studio
 docker build -t atriel-app .
 ```
 
-**Step 5:** Run the Docker container with volume and port mapping
+**Step 4:** Run the Docker container with volume and port mapping
 ``` bash
 docker run -it -v /Users/viacheslav.danilov/projects/personal/atriel-studio:/atriel-studio -p 7860:7860 -p 7822:7822 atriel-app
 ```
 
+<a name="interfaces"></a>
+## 🖥️ Interfaces
+<br>
 <p align="center">
   <img id="figure-3" width="100%" height="100%" src=".assets/csg_generation.png" alt="CSV generation UI">
 </p>

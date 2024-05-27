@@ -29,7 +29,7 @@ The shop is available on multiple platforms and marketplaces:
 <br>
 <p align="center">
   <a href="https://atriel-studio.com/product/esthetician-instagram-posts-02/" target="_blank">
-    <img id="figure-2" width="70%" height="70%" src=".assets/esthetician_instagram_bundle.jpg" alt="Esthetician instagram bundle">
+    <img id="figure-1" width="70%" height="70%" src=".assets/esthetician_instagram_bundle.jpg" alt="Esthetician instagram bundle">
   </a>
 </p>
 
@@ -39,13 +39,25 @@ The shop is available on multiple platforms and marketplaces:
 
 <br>
 <p align="center">
-  <a href="https://atriel-studio.com/product/airbnb-guest-book-template-01/" target="_blank">
-    <img id="figure-2" width="70%" height="70%" src=".assets/airbnb_guest_book.jpg" alt="Airbnb guestbook">
+  <a href="https://atriel-studio.com/product/client-welcome-packet-template-02/" target="_blank">
+    <img id="figure-2" width="70%" height="70%" src=".assets/services_and_pricing_guide.jpg" alt="Services & Pricing Guide">
   </a>
 </p>
 
 <p align="center">
-    <em><a href="https://atriel-studio.com/product/airbnb-guest-book-template-01/" target="_blank">Instagram templates for Estheticians and Beauty Business Owners</a></em>
+    <em><a href="https://atriel-studio.com/product/client-welcome-packet-template-02/" target="_blank">Services & Pricing Guide</a></em>
+</p>
+
+
+<br>
+<p align="center">
+  <a href="https://atriel-studio.com/product/airbnb-guest-book-template-01/" target="_blank">
+    <img id="figure-3" width="70%" height="70%" src=".assets/airbnb_guest_book.jpg" alt="Airbnb guest book">
+  </a>
+</p>
+
+<p align="center">
+    <em><a href="https://atriel-studio.com/product/airbnb-guest-book-template-01/" target="_blank">Airbnb Guest Book Template</a></em>
 </p>
 
 
@@ -102,7 +114,7 @@ docker run -it -v /Users/viacheslav.danilov/projects/personal/atriel-studio:/atr
 ## 🖥️ Interfaces
 <br>
 <p align="center">
-  <img id="figure-3" width="100%" height="100%" src=".assets/csg_generation.png" alt="CSV generation UI">
+  <img id="figure-4" width="100%" height="100%" src=".assets/csg_generation.png" alt="CSV generation UI">
 </p>
 
 <p align="center">
@@ -111,7 +123,7 @@ docker run -it -v /Users/viacheslav.danilov/projects/personal/atriel-studio:/atr
 
 
 <p align="center">
-  <img id="figure-4" width="100%" height="100%" src=".assets/image_generation.png" alt="Image generation UI">
+  <img id="figure-5" width="100%" height="100%" src=".assets/image_generation.png" alt="Image generation UI">
 </p>
 
 <p align="center">

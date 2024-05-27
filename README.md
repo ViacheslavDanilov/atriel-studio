@@ -37,6 +37,17 @@ The shop is available on multiple platforms and marketplaces:
     <em><a href="https://atriel-studio.com/product/esthetician-instagram-posts-02/" target="_blank">Instagram templates for Estheticians and Beauty Business Owners</a></em>
 </p>
 
+<br>
+<p align="center">
+  <a href="https://atriel-studio.com/product/airbnb-guest-book-template-01/" target="_blank">
+    <img id="figure-2" width="80%" height="80%" src=".assets/airbnb_guest_book.jpg" alt="Airbnb guestbook">
+  </a>
+</p>
+
+<p align="center">
+    <em><a href="https://atriel-studio.com/product/airbnb-guest-book-template-01/" target="_blank">Instagram templates for Estheticians and Beauty Business Owners</a></em>
+</p>
+
 
 <a name="requirements"></a>
 ## 💻 Requirements

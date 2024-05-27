@@ -19,6 +19,16 @@ The shop is available on multiple platforms and marketplaces:
 - **Atriel Studio:** https://atriel-studio.com/
 - **Etsy:** https://atrielstudio.etsy.com/
 - **Creative Market:** https://creativemarket.com/LiliesandBerries
+- **Pinterest:** https://creativemarket.com/LiliesandBerries
+
+<p align="center">
+  <img id="figure-3" width="100%" height="100%" src=".assets/model_comparison.jpg" alt="Model comparison">
+</p>
+
+<p align="center">
+    <em><strong>Figure 3.</strong> Comparison of models for microvascular segmentation in tissue-engineered vascular grafts.</em>
+</p>
+
 
 <a name="requirements"></a>
 ## 💻 Requirements
@@ -68,3 +78,20 @@ docker build -t atriel-app .
 ``` bash
 docker run -it -v /Users/viacheslav.danilov/projects/personal/atriel-studio:/atriel-studio -p 7860:7860 -p 7822:7822 atriel-app
 ```
+
+<p align="center">
+  <img id="figure-3" width="100%" height="100%" src=".assets/csg_generation.png" alt="CSV generation UI">
+</p>
+
+<p align="center">
+    <em>Interface for bulk upload pins to Pinterest.</em>
+</p>
+
+
+<p align="center">
+  <img id="figure-4" width="100%" height="100%" src=".assets/image_generation.png" alt="Image generation UI">
+</p>
+
+<p align="center">
+    <em>Interface for image generation pipeline.</em>
+</p>

@@ -4,6 +4,11 @@ FROM continuumio/miniconda3
 # Set the working directory
 WORKDIR /atriel-studio
 
+# Set the environment variables
+ENV ENV_NAME="atriel"
+ENV GRADIO_SERVER_NAME="0.0.0.0"
+ENV GRADIO_SERVER_PORT=7860
+
 # Install git
 RUN apt-get update && apt-get install -y git libgl1-mesa-glx libglib2.0-0
 
@@ -20,11 +25,11 @@ COPY .env .
 # Make RUN commands use the new environment
 SHELL ["conda", "run", "-n", "atriel", "/bin/bash", "-c"]
 
-# Expose the port that your app runs on
-EXPOSE 7860
+# Activate environment and install the project as a package
+RUN conda run -n "${ENV_NAME}" pip install -e .
 
-# Set the environment variable to ensure Gradio listens on all network interfaces
-ENV GRADIO_SERVER_NAME="0.0.0.0"
+# Expose the port that your app runs on
+EXPOSE ${GRADIO_SERVER_PORT}
 
 # Set the default command to an interactive shell
 # CMD ["/bin/bash"]

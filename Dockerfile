@@ -27,7 +27,7 @@ EXPOSE 7860
 ENV GRADIO_SERVER_NAME="0.0.0.0"
 
 # Set the default command to an interactive shell
-CMD ["/bin/bash"]
+# CMD ["/bin/bash"]
 
 # Run the application
-# CMD ["conda", "run", "--no-capture-output", "-n", "atriel", "python", "app.py"]
+CMD ["conda", "run", "--no-capture-output", "-n", "atriel", "python", "app.py"]

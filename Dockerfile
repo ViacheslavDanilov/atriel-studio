@@ -8,8 +8,9 @@ WORKDIR /atriel-studio
 ENV ENV_NAME="atriel"
 ENV GRADIO_SERVER_NAME="0.0.0.0"
 ENV GRADIO_SERVER_PORT=7860
+ENV SSH_PORT=7822
 
-# Install git
+# Install dependencies
 RUN apt-get update && apt-get install -y git libgl1-mesa-glx libglib2.0-0
 
 # Clone the repository
@@ -30,9 +31,10 @@ RUN conda run -n "${ENV_NAME}" pip install -e .
 
 # Expose the port that your app runs on
 EXPOSE ${GRADIO_SERVER_PORT}
+EXPOSE ${SSH_PORT}
 
 # Set the default command to an interactive shell
-# CMD ["/bin/bash"]
+CMD ["/bin/bash"]
 
 # Run the application
-CMD ["conda", "run", "--no-capture-output", "-n", "atriel", "python", "app.py"]
+#CMD ["conda", "run", "--no-capture-output", "-n", "atriel", "python", "app.py"]

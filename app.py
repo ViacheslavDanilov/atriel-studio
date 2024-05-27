@@ -162,4 +162,8 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
 
 
 if __name__ == '__main__':
-    app.launch(share=False)
+    app.launch(
+        share=False,
+        server_name='0.0.0.0',
+        server_port=7860,
+    )

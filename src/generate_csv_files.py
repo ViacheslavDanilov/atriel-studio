@@ -23,7 +23,7 @@ log.setLevel(logging.INFO)
 
 def load_credentials(dotenv_path: str = '.env') -> Tuple[str, str, str, int, str, str]:
     load_dotenv(dotenv_path)
-    HOSTNAME = os.environ.get('HOSTNAME')
+    HOSTNAME = os.environ.get('SERVER_NAME')
     USERNAME = os.environ.get('USERNAME')
     PASSWORD = os.environ.get('PASSWORD')
     PORT = int(os.environ.get('PORT'))

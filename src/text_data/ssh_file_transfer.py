@@ -55,6 +55,8 @@ class SSHFileTransfer:
             self.sftp.put(local_path, remote_path)
         except Exception as e:
             logging.info(f'Error: {e}')
+            logging.info(f'Local path: {local_path}')
+            logging.info(f'Remote path: {remote_path}')
 
     def download_file(
         self,
@@ -83,7 +85,7 @@ class SSHFileTransfer:
 
 if __name__ == '__main__':
     load_dotenv()
-    hostname = os.environ.get('HOSTNAME')
+    hostname = os.environ.get('SERVER_NAME')
     username = os.environ.get('USERNAME')
     password = os.environ.get('PASSWORD')
     port = int(os.environ.get('PORT'))

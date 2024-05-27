@@ -21,8 +21,6 @@ The shop is available on multiple platforms and marketplaces:
 - **Atriel Studio:** https://atriel-studio.com/
 - **Etsy:** https://atrielstudio.etsy.com/
 - **Creative Market:** https://creativemarket.com/LiliesandBerries
-- **Pinterest:** https://creativemarket.com/LiliesandBerries
-
 
 <a name="products"></a>
 ## 🛍️ Products

@@ -70,9 +70,9 @@ def generate_csv_files(
     pins_per_day_canva_instagram_templates: int,
     pins_per_day_instagram_highlight_covers: int,
     pins_per_day_instagram_puzzle_feed: int,
-    pins_per_day_business_cards: int,
-    pins_per_day_airbnb_welcome_book: int,
-    pins_per_day_price_and_service_guide: int,
+    pins_per_day_blanket_mockup: int,
+    pins_per_day_business_card_mockup: int,
+    pins_per_day_carpet_mockup: int,
     seed: int = 11,
 ) -> str:
 
@@ -81,9 +81,9 @@ def generate_csv_files(
             'canva-instagram-templates': pins_per_day_canva_instagram_templates,
             'instagram-highlight-covers': pins_per_day_instagram_highlight_covers,
             'instagram-puzzle-feed': pins_per_day_instagram_puzzle_feed,
-            'business-cards': pins_per_day_business_cards,
-            'airbnb-welcome-book': pins_per_day_airbnb_welcome_book,
-            'price-and-service-guide': pins_per_day_price_and_service_guide,
+            'blanket-mockup': pins_per_day_blanket_mockup,
+            'business-card-mockup': pins_per_day_business_card_mockup,
+            'carpet-mockup': pins_per_day_carpet_mockup,
         }
 
         # Load credentials

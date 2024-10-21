@@ -47,10 +47,15 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 value=False,
                 info='If checked, local files will be removed after generation',
             )
+
+        # "Pins per Day" section header
+        with gr.Row():
+            gr.HTML("<h3 style='text-align:center; color: black;'>Pins per Day</h2>")
+
         # Tab 1 - Row 3
         with gr.Row():
             pins_per_day_canva_instagram_templates = gr.Slider(
-                label='Pins per day - Canva Instagram Templates',
+                label='Canva Instagram Templates',
                 minimum=0,
                 maximum=10,
                 step=1,
@@ -58,7 +63,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 info='Choose between 0 and 10',
             )
             pins_per_day_instagram_highlight_covers = gr.Slider(
-                label='Pins per day - Instagram Highlight Covers',
+                label='Instagram Highlight Covers',
                 minimum=0,
                 maximum=10,
                 step=1,
@@ -66,7 +71,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 info='Choose between 0 and 10',
             )
             pins_per_day_instagram_puzzle_feed = gr.Slider(
-                label='Pins per day - Instagram Puzzle Feed',
+                label='Instagram Puzzle Feed',
                 minimum=0,
                 maximum=10,
                 step=1,
@@ -75,24 +80,24 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
             )
         # Tab 1 - Row 4
         with gr.Row():
-            pins_per_day_business_cards = gr.Slider(
-                label='Pins per day - Business Cards',
+            pins_per_day_blanket_mockup = gr.Slider(
+                label='Blanket Mockup',
                 minimum=0,
                 maximum=10,
                 step=1,
                 value=0,
                 info='Choose between 0 and 10',
             )
-            pins_per_day_airbnb_welcome_book = gr.Slider(
-                label='Pins per day - Airbnb Welcome Book',
+            pins_per_day_business_card_mockup = gr.Slider(
+                label='Business Card Mockups',
                 minimum=0,
                 maximum=10,
                 step=1,
                 value=0,
                 info='Choose between 0 and 10',
             )
-            pins_per_day_price_and_service_guide = gr.Slider(
-                label='Pins per day - Price and Service Guide',
+            pins_per_day_carpet_mockup = gr.Slider(
+                label='Carpet Mockups',
                 minimum=0,
                 maximum=10,
                 step=1,
@@ -114,9 +119,9 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 pins_per_day_canva_instagram_templates,
                 pins_per_day_instagram_highlight_covers,
                 pins_per_day_instagram_puzzle_feed,
-                pins_per_day_business_cards,
-                pins_per_day_airbnb_welcome_book,
-                pins_per_day_price_and_service_guide,
+                pins_per_day_blanket_mockup,
+                pins_per_day_business_card_mockup,
+                pins_per_day_carpet_mockup,
             ],
             outputs=status_msg,
         )

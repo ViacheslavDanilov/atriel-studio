@@ -59,7 +59,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 minimum=0,
                 maximum=10,
                 step=1,
-                value=7,
+                value=0,
                 info='Choose between 0 and 10',
             )
             pins_per_day_instagram_highlight_covers = gr.Slider(
@@ -67,7 +67,7 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 minimum=0,
                 maximum=10,
                 step=1,
-                value=2,
+                value=0,
                 info='Choose between 0 and 10',
             )
             pins_per_day_instagram_puzzle_feed = gr.Slider(
@@ -75,20 +75,21 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 minimum=0,
                 maximum=10,
                 step=1,
-                value=1,
+                value=0,
                 info='Choose between 0 and 10',
             )
+
         # Tab 1 - Row 4
         with gr.Row():
-            pins_per_day_blanket_mockup = gr.Slider(
-                label='Blanket Mockup',
+            pins_per_day_blanket_mockups = gr.Slider(
+                label='Blanket Mockups',
                 minimum=0,
                 maximum=10,
                 step=1,
                 value=0,
                 info='Choose between 0 and 10',
             )
-            pins_per_day_business_card_mockup = gr.Slider(
+            pins_per_day_business_card_mockups = gr.Slider(
                 label='Business Card Mockups',
                 minimum=0,
                 maximum=10,
@@ -96,8 +97,62 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 value=0,
                 info='Choose between 0 and 10',
             )
-            pins_per_day_carpet_mockup = gr.Slider(
+            pins_per_day_carpet_mockups = gr.Slider(
                 label='Carpet Mockups',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+
+        # Tab 1 - Row 4
+        with gr.Row():
+            pins_per_day_frame_mockups = gr.Slider(
+                label='Frame Mockups',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_new_highlights = gr.Slider(
+                label='New Highlights',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_sticker_mockups = gr.Slider(
+                label='Sticker Mockups',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+
+        # Tab 1 - Row 5
+        with gr.Row():
+            pins_per_day_wallpaper_mockups = gr.Slider(
+                label='Wallpaper Mockups',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_to_be_implemented_1 = gr.Slider(
+                label='Future placeholder 1 (Not Implemented Yet)',
+                minimum=0,
+                maximum=10,
+                step=1,
+                value=0,
+                info='Choose between 0 and 10',
+            )
+            pins_per_day_to_be_implemented_2 = gr.Slider(
+                label='Future placeholder 2 (Not Implemented Yet)',
                 minimum=0,
                 maximum=10,
                 step=1,
@@ -119,9 +174,13 @@ with gr.Blocks(theme=gr.themes.Default(), title='Generation App') as app:
                 pins_per_day_canva_instagram_templates,
                 pins_per_day_instagram_highlight_covers,
                 pins_per_day_instagram_puzzle_feed,
-                pins_per_day_blanket_mockup,
-                pins_per_day_business_card_mockup,
-                pins_per_day_carpet_mockup,
+                pins_per_day_blanket_mockups,
+                pins_per_day_business_card_mockups,
+                pins_per_day_carpet_mockups,
+                pins_per_day_frame_mockups,
+                pins_per_day_new_highlights,
+                pins_per_day_sticker_mockups,
+                pins_per_day_wallpaper_mockups,
             ],
             outputs=status_msg,
         )

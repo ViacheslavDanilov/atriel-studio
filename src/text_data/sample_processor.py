@@ -102,7 +102,7 @@ class SampleProcessor:
         try:
             df_board = pd.read_csv(os.path.join(sample_dir, 'board.csv'))
             board_list = df_board['Board'].tolist() * len(img_paths)
-        except FileNotFoundError:
+        except Exception:
             board_list = [category.replace('-', ' ').title() for category in category_list]
         df['Pinterest board'] = board_list
 

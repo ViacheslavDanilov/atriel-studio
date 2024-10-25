@@ -70,9 +70,13 @@ def generate_csv_files(
     pins_per_day_canva_instagram_templates: int,
     pins_per_day_instagram_highlight_covers: int,
     pins_per_day_instagram_puzzle_feed: int,
-    pins_per_day_business_cards: int,
-    pins_per_day_airbnb_welcome_book: int,
-    pins_per_day_price_and_service_guide: int,
+    pins_per_day_blanket_mockups: int,
+    pins_per_day_business_card_mockups: int,
+    pins_per_day_carpet_mockups: int,
+    pins_per_day_frame_mockups: int,
+    pins_per_day_new_highlights: int,
+    pins_per_day_sticker_mockups: int,
+    pins_per_day_wallpaper_mockups: int,
     seed: int = 11,
 ) -> str:
 
@@ -81,9 +85,13 @@ def generate_csv_files(
             'canva-instagram-templates': pins_per_day_canva_instagram_templates,
             'instagram-highlight-covers': pins_per_day_instagram_highlight_covers,
             'instagram-puzzle-feed': pins_per_day_instagram_puzzle_feed,
-            'business-cards': pins_per_day_business_cards,
-            'airbnb-welcome-book': pins_per_day_airbnb_welcome_book,
-            'price-and-service-guide': pins_per_day_price_and_service_guide,
+            'blanket-mockups': pins_per_day_blanket_mockups,
+            'business-card-mockups': pins_per_day_business_card_mockups,
+            'carpet-mockups': pins_per_day_carpet_mockups,
+            'frame-mockups': pins_per_day_frame_mockups,
+            'new-highlights': pins_per_day_new_highlights,
+            'sticker-mockups': pins_per_day_sticker_mockups,
+            'wallpaper-mockups': pins_per_day_wallpaper_mockups,
         }
 
         # Load credentials

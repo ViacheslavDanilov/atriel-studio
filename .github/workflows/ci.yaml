@@ -35,18 +35,15 @@ jobs:
     - name: Linting
       run: |
         pre-commit run check-yaml --all-files --verbose
-        pre-commit run check-yaml --all-files --verbose
         pre-commit run check-toml --all-files --verbose
         pre-commit run check-json --all-files --verbose
         pre-commit run check-ast --all-files --verbose
-        pre-commit run requirements-txt-fixer --all-files --verbose
         pre-commit run trailing-whitespace --all-files --verbose
         pre-commit run end-of-file-fixer --all-files --verbose
-        pre-commit run double-quote-string-fixer --all-files --verbose
         pre-commit run add-trailing-comma --all-files --verbose
-        pre-commit run black --all-files --verbose
         pre-commit run pretty-format-yaml --all-files --verbose
         pre-commit run pycln --all-files --verbose
         pre-commit run isort --all-files --verbose
         pre-commit run ruff --all-files --verbose
+        pre-commit run ruff-format --all-files --verbose
         echo -e "${GREEN}Job completed successfully${NC}"

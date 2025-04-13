@@ -43,7 +43,7 @@ class ImageGenerator:
         num_elements: int,
     ) -> List[str]:
         if num_elements > len(lst):
-            raise ValueError('N is greater than the length of the list')
+            raise ValueError("N is greater than the length of the list")
         selected_elements = random.sample(lst, num_elements)
         random.shuffle(selected_elements)
         return selected_elements
@@ -174,8 +174,8 @@ class ImageGenerator:
         sample_dir: str,
         save_dir: str,
     ) -> None:
-        img_dir = os.path.join(sample_dir, 'images')
-        img_paths = self.get_file_list(img_dir, '*.[jpPJ][nNpP][gG]')
+        img_dir = os.path.join(sample_dir, "images")
+        img_paths = self.get_file_list(img_dir, "*.[jpPJ][nNpP][gG]")
         mask_layout = self._load_layout(row.layout_path)
         img_back = self._load_background(
             row.background_path,
@@ -218,7 +218,7 @@ class ImageGenerator:
                         y_max=y_max,
                     )
 
-            filename = f'{row.layout_id}_{row.background_id}_{idx + 1:01d}.png'
+            filename = f"{row.layout_id}_{row.background_id}_{idx + 1:01d}.png"
             save_path = os.path.join(save_dir, filename)
             cv2.imwrite(save_path, img_back, [cv2.IMWRITE_PNG_COMPRESSION, 6])
 
@@ -228,7 +228,6 @@ class ImageGenerator:
         sample_dir: str,
         save_dir: str,
     ) -> None:
-
         # Create a directory to store the files
         sample_name = Path(sample_dir).name
         sample_save_dir = os.path.join(save_dir, sample_name)
@@ -241,5 +240,5 @@ class ImageGenerator:
                 sample_dir=sample_dir,
                 save_dir=sample_save_dir,
             )
-            for row in tqdm(df.itertuples(), unit='pairs')
+            for row in tqdm(df.itertuples(), unit="pairs")
         )

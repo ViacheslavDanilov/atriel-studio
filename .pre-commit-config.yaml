@@ -1,16 +1,14 @@
 # pre-commit hooks
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
+  rev: v5.0.0
   hooks:
   - id: check-yaml
   - id: check-toml
   - id: check-json
   - id: check-ast
-  - id: requirements-txt-fixer
   - id: trailing-whitespace
   - id: end-of-file-fixer
-  - id: double-quote-string-fixer
 
 # trailing comma fixer
 - repo: https://github.com/asottile/add-trailing-comma
@@ -18,30 +16,23 @@ repos:
   hooks:
   - id: add-trailing-comma
 
-# black formatter
-- repo: https://github.com/ambv/black
-  rev: 24.4.0
-  hooks:
-  - id: black
-    args: [--config, pyproject.toml]
-
 # yaml formatter
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.13.0
+  rev: v2.14.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2', --preserve-quotes]
 
 # import cleaner
 - repo: https://github.com/hadialqattan/pycln
-  rev: v2.4.0
+  rev: v2.5.0
   hooks:
   - id: pycln
     args: [--config, pyproject.toml]
 
 # import sorter
 - repo: https://github.com/timothycrosley/isort
-  rev: 5.13.2
+  rev: 6.0.1
   hooks:
   - id: isort
     files: \.(py)$
@@ -49,23 +40,22 @@ repos:
 
 # ruff
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.4.0'
+  rev: 'v0.11.5'
   hooks:
   - id: ruff
-    args: [--fix, --exit-non-zero-on-fix]
-
-# docstring style checker
-- repo: https://github.com/pycqa/pydocstyle
-  rev: 6.3.0
-  hooks:
-  - id: pydocstyle
-    additional_dependencies: [toml, tomli]
-    args: [--config, pyproject.toml]
+    args: [--fix]
+  - id: ruff-format
 
 # static type checker
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.9.0
+  rev: v1.15.0
   hooks:
   - id: mypy
     args: [--config-file, pyproject.toml]
     additional_dependencies: [types-pytz, types-paramiko]
+
+# exclude given directories from checking
+exclude: |
+  (?x)(
+      ^src/temp/
+  )

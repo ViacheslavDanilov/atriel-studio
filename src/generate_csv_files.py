@@ -21,14 +21,14 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 
 
-def load_credentials(dotenv_path: str = '.env') -> Tuple[str, str, str, int, str, str]:
+def load_credentials(dotenv_path: str = ".env") -> Tuple[str, str, str, int, str, str]:
     load_dotenv(dotenv_path)
-    HOSTNAME = os.environ.get('SERVER_NAME')
-    USERNAME = os.environ.get('USERNAME')
-    PASSWORD = os.environ.get('PASSWORD')
-    PORT = int(os.environ.get('PORT'))
-    REMOTE_ROOT_DIR = os.environ.get('REMOTE_ROOT_DIR')
-    URL = os.environ.get('URL')
+    HOSTNAME = os.environ.get("SERVER_NAME")
+    USERNAME = os.environ.get("USERNAME")
+    PASSWORD = os.environ.get("PASSWORD")
+    PORT = int(os.environ.get("PORT"))
+    REMOTE_ROOT_DIR = os.environ.get("REMOTE_ROOT_DIR")
+    URL = os.environ.get("URL")
     return HOSTNAME, USERNAME, PASSWORD, PORT, REMOTE_ROOT_DIR, URL
 
 
@@ -43,11 +43,11 @@ def filter_paths_by_category(
 
     missing_categories = non_zero_categories - available_categories
     if missing_categories:
-        log.info('Categories with non-zero pins per day not available in the provided directory:')
+        log.info("Categories with non-zero pins per day not available in the provided directory:")
         for category in missing_categories:
-            print('-', category)
+            print("-", category)
         raise ValueError(
-            'Some categories with non-zero pins per day are not available in the provided directory.',
+            "Some categories with non-zero pins per day are not available in the provided directory.",
         )
 
     filtered_paths = []
@@ -74,11 +74,11 @@ def create_df_per_day(
     unique_links = []
     df_per_day_list = []
     for row_idx, row in df_remaining.iterrows():
-        category = row['category']
+        category = row["category"]
         num_pins = pins_per_day.get(category, 0)
 
         # Check if the maximum number of pins for the category has been reached and the link is unique
-        if pins_added_per_category[category] < num_pins and row['Link'] not in unique_links:
+        if pins_added_per_category[category] < num_pins and row["Link"] not in unique_links:
             # Add the row to the DataFrame for the current day
             df_per_day_list.append(row)
             # Increment the count of pins added for the category
@@ -86,7 +86,7 @@ def create_df_per_day(
             # Delete the row from df_remaining
             df_remaining = df_remaining.drop(index=row_idx)
             # Add the link to the list of unique links
-            unique_links.append(row['Link'])
+            unique_links.append(row["Link"])
 
         # Check if the pins for all categories have been added for the current day
         if all(
@@ -110,7 +110,7 @@ def verify_pin_availability(
     # Count the number of pins available for each category in the DataFrame
     pins_available_per_category = {}
     for category in pins_per_day:
-        pins_available_per_category[category] = df[df['category'] == category].shape[0]
+        pins_available_per_category[category] = df[df["category"] == category].shape[0]
 
     pins_needed_per_category = {}
     for category, num_pins in pins_per_day.items():
@@ -131,7 +131,7 @@ def verify_pin_availability(
             raise ValueError(
                 f"Not enough pins available for category '{category}'. Needed: {pins_needed}, Available: {pins_available}",
             )
-    log.info('All pins for each category are available.')
+    log.info("All pins for each category are available.")
 
 
 def save_csv_files(
@@ -141,36 +141,36 @@ def save_csv_files(
     os.makedirs(save_dir, exist_ok=True)
 
     # Create a new column 'Auxiliary date' by converting 'Publish date' column to datetime
-    df['Auxiliary date'] = pd.to_datetime(df['Publish date'])
+    df["Auxiliary date"] = pd.to_datetime(df["Publish date"])
 
     # Split DataFrame into chunks and save each chunk to a separate CSV file
-    unique_dates = df['Auxiliary date'].dt.date.unique()
+    unique_dates = df["Auxiliary date"].dt.date.unique()
     for date in unique_dates:
-        df_chunk = df[df['Auxiliary date'].dt.date == date]
+        df_chunk = df[df["Auxiliary date"].dt.date == date]
 
         # Get the formatted date for the CSV filename
-        formatted_date = date.strftime('%b-%d').lower()
+        formatted_date = date.strftime("%b-%d").lower()
 
         # Drop the 'Auxiliary date' column
-        df_chunk = df_chunk.drop(columns=['Auxiliary date'])
+        df_chunk = df_chunk.drop(columns=["Auxiliary date"])
 
         # Save chunk to CSV with filename based on the formatted date
-        csv_filename = f'pins-{formatted_date}.csv'
+        csv_filename = f"pins-{formatted_date}.csv"
         csv_filepath = os.path.join(save_dir, csv_filename)
         df_chunk.to_csv(
             csv_filepath,
             index=False,
-            encoding='utf-8',
+            encoding="utf-8",
         )
 
 
 @hydra.main(
-    config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='generate_csv_files',
+    config_path=os.path.join(PROJECT_DIR, "configs"),
+    config_name="generate_csv_files",
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    log.info(f"Config:\n\n{OmegaConf.to_yaml(cfg)}")
 
     # Define absolute paths
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
@@ -180,7 +180,7 @@ def main(cfg: DictConfig) -> None:
     HOSTNAME, USERNAME, PASSWORD, PORT, REMOTE_ROOT_DIR, URL = load_credentials()
 
     # Get list of sample paths to process
-    sample_dirs_ = glob(os.path.join(data_dir, '*/*'))
+    sample_dirs_ = glob(os.path.join(data_dir, "*/*"))
     sample_dirs = filter_paths_by_category(sample_dirs_, cfg.pins_per_day)
 
     # Process samples by their paths
@@ -190,11 +190,11 @@ def main(cfg: DictConfig) -> None:
         column_names=CSV_COLUMNS,
     )
     df_list = []
-    for sample_dir in tqdm(sample_dirs, desc='Processing samples', unit='samples'):
+    for sample_dir in tqdm(sample_dirs, desc="Processing samples", unit="samples"):
         df_ = sample_processor.process_sample(sample_dir)
         df_list.append(df_)
     df_all = pd.concat(df_list, ignore_index=True)
-    df = df_all.drop_duplicates(subset=['Title'], keep='first')
+    df = df_all.drop_duplicates(subset=["Title"], keep="first")
 
     # Check if there is enough samples for each category
     verify_pin_availability(df, cfg.pins_per_day, num_days=cfg.num_days)
@@ -211,11 +211,11 @@ def main(cfg: DictConfig) -> None:
         df_day_list.append(df_day)
 
     # Add publish dates to the dataframe
-    current_date = datetime.datetime.strptime(cfg.start_date, '%Y-%m-%d')
+    current_date = datetime.datetime.strptime(cfg.start_date, "%Y-%m-%d")
     for day_idx, df_day in enumerate(df_day_list):
         publish_date_generator = PublishDateGenerator(date=current_date)
         publish_date_list = publish_date_generator.generate_times(num_pins_per_day=len(df_day))
-        df_day['Publish date'] = publish_date_list
+        df_day["Publish date"] = publish_date_list
         df_day_list[day_idx] = df_day
         current_date += datetime.timedelta(days=1)
 
@@ -230,8 +230,8 @@ def main(cfg: DictConfig) -> None:
             url=URL,
         )
         ssh_file_transfer.connect()
-        ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, '*'))
-        for row in tqdm(df_out.itertuples(), desc='Uploading images', unit='images'):
+        ssh_file_transfer.remove_remote_dir(os.path.join(REMOTE_ROOT_DIR, "*"))
+        for row in tqdm(df_out.itertuples(), desc="Uploading images", unit="images"):
             remote_dir = str(Path(row.dst_path).parent)
             ssh_file_transfer.create_remote_dir(remote_dir)
             ssh_file_transfer.upload_file(
@@ -255,14 +255,14 @@ def main(cfg: DictConfig) -> None:
     # Log summary
     total_pins = len(df_all)
     num_saved_pins = len(df_out)
-    num_products = len(df_out['Link'].unique())
-    log.info('')
-    log.info(f'Total pins available: {total_pins}')
-    log.info(f'Saved pins: {num_saved_pins}')
-    log.info(f'Products advertised: {num_products}')
+    num_products = len(df_out["Link"].unique())
+    log.info("")
+    log.info(f"Total pins available: {total_pins}")
+    log.info(f"Saved pins: {num_saved_pins}")
+    log.info(f"Products advertised: {num_products}")
 
-    log.info('Complete')
+    log.info("Complete")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

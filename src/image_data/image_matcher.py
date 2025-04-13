@@ -34,27 +34,26 @@ class ImageMatcher:
         path: str,
     ) -> Tuple[str, Union[str, None]]:
         filename = str(Path(path).stem)
-        parts = filename.split('_')
+        parts = filename.split("_")
         if len(parts) == 2:  # Format: layout_XX.jpg
             return parts[1], None
         elif len(parts) == 3:  # Format: background_XX_Y.jpg
-            return parts[1], parts[2].split('.')[0]
+            return parts[1], parts[2].split(".")[0]
         else:
-            raise ValueError('Invalid filename format')
+            raise ValueError("Invalid filename format")
 
     def create_dataframe(
         self,
         layout_paths: List[str],
         bg_paths: List[str],
     ) -> pd.DataFrame:
-
         file_dict: dict = {
-            'layout_id': [],
-            'background_id': [],
-            'layout_name': [],
-            'background_name': [],
-            'layout_path': [],
-            'background_path': [],
+            "layout_id": [],
+            "background_id": [],
+            "layout_name": [],
+            "background_name": [],
+            "layout_path": [],
+            "background_path": [],
         }
         for bg_path in bg_paths:
             id_layout_check, id_bg = self.extract_id(path=bg_path)
@@ -62,12 +61,12 @@ class ImageMatcher:
                 id_layout, _ = self.extract_id(path=layout_path)
 
                 if id_layout_check == id_layout:
-                    file_dict['layout_id'].append(id_layout)
-                    file_dict['background_id'].append(id_bg)
-                    file_dict['layout_name'].append(Path(layout_path).name)
-                    file_dict['background_name'].append(Path(bg_path).name)
-                    file_dict['layout_path'].append(layout_path)
-                    file_dict['background_path'].append(bg_path)
+                    file_dict["layout_id"].append(id_layout)
+                    file_dict["background_id"].append(id_bg)
+                    file_dict["layout_name"].append(Path(layout_path).name)
+                    file_dict["background_name"].append(Path(bg_path).name)
+                    file_dict["layout_path"].append(layout_path)
+                    file_dict["background_path"].append(bg_path)
                 else:
                     continue
 
@@ -76,16 +75,15 @@ class ImageMatcher:
         return df
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    sample_dir = "data/input/stories/marketing_05"
+    save_dir = "data/output/stories/"
 
-    sample_dir = 'data/input/stories/marketing_05'
-    save_dir = 'data/output/stories/'
-
-    layout_dir = os.path.join(sample_dir, 'layouts')
-    bg_dir = os.path.join(sample_dir, 'backgrounds')
+    layout_dir = os.path.join(sample_dir, "layouts")
+    bg_dir = os.path.join(sample_dir, "backgrounds")
 
     matcher = ImageMatcher()
-    layout_paths = matcher.get_file_list(layout_dir, 'layout*.[jpPJ][nNpP][gG]')
-    bg_paths = matcher.get_file_list(bg_dir, 'background*.[jpPJ][nNpP][gG]')
+    layout_paths = matcher.get_file_list(layout_dir, "layout*.[jpPJ][nNpP][gG]")
+    bg_paths = matcher.get_file_list(bg_dir, "background*.[jpPJ][nNpP][gG]")
     df = matcher.create_dataframe(layout_paths, bg_paths)
-    print('Complete!')
+    print("Complete!")

@@ -10,11 +10,11 @@ class TitleGenerator:
     def __init__(
         self,
         df: pd.DataFrame,
-        keyword_column: str = 'Keywords',
+        keyword_column: str = "Keywords",
         min_desired_length: int = 60,
         max_desired_length: int = 100,
         max_limit: int = 150,
-        delimiter: str = ' - ',
+        delimiter: str = " - ",
     ):
         self.df = df
         self.keyword_column = keyword_column
@@ -35,7 +35,7 @@ class TitleGenerator:
             attempt_count = 0  # Track the number of attempts to construct a title
             desired_length = random.randint(self.min_desired_length, self.max_desired_length)
             used_keywords = set()
-            title = ''
+            title = ""
 
             while len(title) < self.max_limit:
                 keyword = random.choice(keyword_list).capitalize()
@@ -61,18 +61,17 @@ class TitleGenerator:
         return generated_titles
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     # Test TitleGenerator class
     num_images = 1266
-    keyword_path = 'data/csv_generation/sticker-mockups/all/keywords.csv'
+    keyword_path = "data/csv_generation/sticker-mockups/all/keywords.csv"
     df = pd.read_csv(keyword_path)
     title_generator = TitleGenerator(
         df=df,
-        keyword_column='Keywords',
+        keyword_column="Keywords",
         min_desired_length=60,
         max_desired_length=100,
         max_limit=150,
     )
     title_list = title_generator.generate_titles(num_titles=num_images)
-    print('Generated Titles:', title_list)
+    print("Generated Titles:", title_list)

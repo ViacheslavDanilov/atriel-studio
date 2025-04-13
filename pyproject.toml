@@ -1,13 +1,37 @@
 [project]
-name = 'atriel_studio'
-version = '0.0.1'
+name = "atriel-studio"
+version = "0.1.0"
+description = "This repository is devoted to the ongoing maintenance of the Atriel Studio shop"
+readme = "README.md"
+requires-python = ">=3.11, <3.13"
+dependencies = [
+]
+
+[tool.uv]
+default-groups = ["config", "dev", "processing", "ui"]
+
+[dependency-groups]
+config = [
+    "hydra-core>=1.3.2",
+    "omegaconf>=2.3.0"
+]
+dev = [
+    "pre-commit>=3.6.2",
+    "paramiko>=3.4.0",
+    "python-dotenv>=1.0.1"
+]
+processing = [
+    "joblib>=1.3.2",
+    "numpy>=1.26.4",
+    "opencv-python>=4.9.0.80",
+    "tqdm>=4.66.2"
+]
+ui = [
+    "gradio>=4.21.0"
+]
 
 [tool.setuptools.packages]
 find = {}   # Scan the project directory with the default parameters
-
-[tool.black]
-line_length = 100
-skip_string_normalization = true
 
 [tool.pycln]
 all = true
@@ -22,11 +46,18 @@ ensure_newline_before_comments = true
 
 [tool.ruff]
 line-length = 100
-ignore=['E501']
-# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default
-select = ['E', 'F']
-# Allow unused variables when underscore-prefixed
-dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 'dynamic'
+quote-style = 'double'
+indent-style = 'space'
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+select = ['D']  # Select all pydocstyle rules (denoted by 'D') for linting.
+ignore=['D100', 'D102', 'D103', 'D104', 'D105', 'D106', 'D107', 'D206', 'D300'] # Exclude some pydocstyle rules
+dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$'    # Allow unused variables when underscore-prefixed
 # Exclude a variety of commonly ignored directories
 exclude = [
     '.bzr',
@@ -52,11 +83,14 @@ exclude = [
     'venv',
 ]
 
-[tool.pydocstyle]
+[tool.ruff.lint.mccabe]
+max-complexity = 5  # Flag errors (`C901`) whenever the complexity level exceeds 5.
+
+[tool.ruff.lint.pydocstyle]
 convention = 'google'
-add_ignore = 'D100, D102, D103, D104, D105, D106, D107'
 
 [tool.mypy]
 install_types = true
 no_strict_optional = true
 ignore_missing_imports = true
+explicit_package_bases = true

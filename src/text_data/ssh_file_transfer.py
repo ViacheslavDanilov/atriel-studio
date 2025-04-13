@@ -38,7 +38,7 @@ class SSHFileTransfer:
             )
             self.sftp = self.ssh.open_sftp()
         except Exception as e:
-            logging.info(f'Error: {e}')
+            logging.info(f"Error: {e}")
 
     def disconnect(self) -> None:
         if self.sftp:
@@ -54,9 +54,9 @@ class SSHFileTransfer:
         try:
             self.sftp.put(local_path, remote_path)
         except Exception as e:
-            logging.info(f'Error: {e}')
-            logging.info(f'Local path: {local_path}')
-            logging.info(f'Remote path: {remote_path}')
+            logging.info(f"Error: {e}")
+            logging.info(f"Local path: {local_path}")
+            logging.info(f"Remote path: {remote_path}")
 
     def download_file(
         self,
@@ -66,31 +66,31 @@ class SSHFileTransfer:
         try:
             self.sftp.get(remote_path, local_path)
         except Exception as e:
-            logging.info(f'Error: {e}')
+            logging.info(f"Error: {e}")
 
     def create_remote_dir(self, remote_dir: str) -> None:
         try:
-            logging.debug(f'Create directory: {remote_dir}')
-            self.ssh.exec_command(f'mkdir -p {remote_dir}')
+            logging.debug(f"Create directory: {remote_dir}")
+            self.ssh.exec_command(f"mkdir -p {remote_dir}")
         except Exception as e:
-            logging.info(f'Error: {e}')
+            logging.info(f"Error: {e}")
 
     def remove_remote_dir(self, remote_dir: str) -> None:
         try:
-            logging.debug(f'Remove directory: {remote_dir}')
-            self.ssh.exec_command(f'rm -rf {remote_dir} || true')
+            logging.debug(f"Remove directory: {remote_dir}")
+            self.ssh.exec_command(f"rm -rf {remote_dir} || true")
         except Exception as e:
-            logging.info(f'Error: {e}')
+            logging.info(f"Error: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     load_dotenv()
-    hostname = os.environ.get('SERVER_NAME')
-    username = os.environ.get('USERNAME')
-    password = os.environ.get('PASSWORD')
-    port = int(os.environ.get('PORT'))
-    remote_root_dir = os.environ.get('REMOTE_ROOT_DIR')
-    url = os.environ.get('URL')
+    hostname = os.environ.get("SERVER_NAME")
+    username = os.environ.get("USERNAME")
+    password = os.environ.get("PASSWORD")
+    port = int(os.environ.get("PORT"))
+    remote_root_dir = os.environ.get("REMOTE_ROOT_DIR")
+    url = os.environ.get("URL")
 
     ssh_file_transfer = SSHFileTransfer(
         username=username,
@@ -101,8 +101,8 @@ if __name__ == '__main__':
     )
 
     # Upload image
-    local_path = 'data/test-img.jpg'
-    remote_dir = os.path.join(remote_root_dir, 'test-dir')
+    local_path = "data/test-img.jpg"
+    remote_dir = os.path.join(remote_root_dir, "test-dir")
     remote_path = os.path.join(remote_dir, Path(local_path).name)
     ssh_file_transfer.connect()
     ssh_file_transfer.create_remote_dir(remote_dir)
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     ssh_file_transfer.disconnect()
 
     # Download image
-    local_path = 'data/test-hero-downloaded.jpg'
+    local_path = "data/test-hero-downloaded.jpg"
     ssh_file_transfer.connect()
     ssh_file_transfer.download_file(remote_path=remote_path, local_path=local_path)
     # ssh_file_transfer.remove_remote_dir(remote_dir=remote_dir)

@@ -11,7 +11,7 @@ class DescriptionGenerator:
         self,
         df: pd.DataFrame,
     ) -> None:
-        self.descriptions = df['Description'].tolist()
+        self.descriptions = df["Description"].tolist()
         self.unique_descriptions = set(self.descriptions)
         random.shuffle(self.descriptions)
         self.prev_desc = None
@@ -47,14 +47,13 @@ class DescriptionGenerator:
         return result[:num_descriptions]
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     # Test DescriptionGenerator class
     num_images = 85
     description_path = (
-        'data/csv_generation/ds-01/instagram-highlight-covers/black-celestial/descriptions.csv'
+        "data/csv_generation/ds-01/instagram-highlight-covers/black-celestial/descriptions.csv"
     )
     df = pd.read_csv(description_path)
     desc_generator = DescriptionGenerator(df=df)
     desc_list = desc_generator.generate_descriptions(num_descriptions=num_images)
-    print('Generated Descriptions:', desc_list)
+    print("Generated Descriptions:", desc_list)

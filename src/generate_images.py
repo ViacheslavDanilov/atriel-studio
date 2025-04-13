@@ -15,12 +15,12 @@ log.setLevel(logging.INFO)
 
 
 @hydra.main(
-    config_path=os.path.join(PROJECT_DIR, 'configs'),
-    config_name='generate_images',
+    config_path=os.path.join(PROJECT_DIR, "configs"),
+    config_name="generate_images",
     version_base=None,
 )
 def main(cfg: DictConfig) -> None:
-    log.info(f'Config:\n\n{OmegaConf.to_yaml(cfg)}')
+    log.info(f"Config:\n\n{OmegaConf.to_yaml(cfg)}")
 
     # Define absolute paths
     data_dir = str(os.path.join(PROJECT_DIR, cfg.data_dir))
@@ -42,11 +42,11 @@ def main(cfg: DictConfig) -> None:
     )
 
     # Process samples sequentially
-    for sample_dir in tqdm(sample_dirs, desc='Creating images', unit='samples'):
-        layout_dir = os.path.join(sample_dir, 'layouts')
-        bg_dir = os.path.join(sample_dir, 'backgrounds')
-        layout_paths = matcher.get_file_list(layout_dir, 'layout*.[jpPJ][nNpP][gG]')
-        bg_paths = matcher.get_file_list(bg_dir, 'background*.[jpPJ][nNpP][gG]')
+    for sample_dir in tqdm(sample_dirs, desc="Creating images", unit="samples"):
+        layout_dir = os.path.join(sample_dir, "layouts")
+        bg_dir = os.path.join(sample_dir, "backgrounds")
+        layout_paths = matcher.get_file_list(layout_dir, "layout*.[jpPJ][nNpP][gG]")
+        bg_paths = matcher.get_file_list(bg_dir, "background*.[jpPJ][nNpP][gG]")
         df = matcher.create_dataframe(layout_paths, bg_paths)
         generator.process_sample(
             df=df,
@@ -55,5 +55,5 @@ def main(cfg: DictConfig) -> None:
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
